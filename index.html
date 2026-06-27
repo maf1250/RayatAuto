@@ -86,31 +86,45 @@
             font-size: 16px;
             text-align: center;
         }
+        
+        /* تعديلات تصميم قسم الإعدادات الافتراضية لمنع التزاحم */
         .settings-row {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 15px;
             margin-bottom: 15px;
+            justify-content: center;
         }
         .settings-row div {
             flex: 1;
-            min-width: 120px;
+            min-width: 140px;
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* توسيط الحقول تحت النصوص */
+            text-align: center;
         }
         .settings-row label {
-            display: block;
             font-weight: 600;
-            margin-bottom: 5px;
-            font-size: 13px;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: #5a4303;
         }
         .settings-row input {
-            width: 100%;
-            padding: 8px;
+            width: 85px; /* تصغير المربعات بشكل ثابت */
+            padding: 6px;
             border: 1px solid #ccc;
             border-radius: 4px;
             font-family: inherit;
-            box-sizing: border-box;
             font-size: 14px;
+            text-align: center;
+            background-color: #fff;
         }
+        .settings-row input:focus {
+            outline: none;
+            border-color: #0056b3;
+            box-shadow: 0 0 5px rgba(0,86,179,0.3);
+        }
+
         .times-table {
             width: 100%;
             border-collapse: collapse;
@@ -186,7 +200,7 @@
         .btn-secondary { background-color: #6c757d; }
         .btn-secondary:hover { background-color: #5a6268; }
 
-        .btn-reset { background-color: #17a2b8; width: auto; padding: 10px; margin-bottom:15px; font-size:14px; display: block; margin: 0 auto 15px;}
+        .btn-reset { background-color: #17a2b8; width: auto; padding: 8px 15px; margin-bottom:15px; font-size:13px; display: block; margin: 0 auto 15px;}
         .btn-reset:hover { background-color: #138496; }
 
         .status-msg {
@@ -201,7 +215,7 @@
 <body>
 
     <div class="container">
-        <h1>أداة دمج جداول المحاضرات 🚀</h1>
+        <h1>أداة دمج جداول المحاضرات</h1>
         
         <!-- الخطوة 1: رفع الملفات -->
         <div id="step1" class="step active">
@@ -237,22 +251,22 @@
                     </div>
                     <div>
                         <label>مدة المحاضرة (بالدقائق):</label>
-                        <input type="number" id="duration" value="50" min="0" onchange="generateTimes()">
+                        <input type="number" id="duration" value="50" min="50" onchange="generateTimes()">
                     </div>
                     <div>
-                        <label>الاستراحة (بعد المحاضرات 2 ، 4 ، 6 الخ):</label>
+                        <label>الاستراحة (بعد 2 ، 4 ، 6 الخ):</label>
                         <input type="number" id="defaultBreakTime" value="5" min="0" onchange="generateTimes()">
                     </div>
                 </div>
                 
-                <button class="btn-process btn-reset" onclick="generateTimes()">إعادة ضبط الجدول بناءً على الافتراضي 🔄</button>
+                <button class="btn-process btn-reset" onclick="generateTimes()">إعادة ضبط الجدول بناءً على الافتراضي</button>
 
                 <table class="times-table">
                     <thead>
                         <tr>
                             <th>المحاضرة</th>
-                            <th>بداية</th>
-                            <th>نهاية</th>
+                            <th>وقت البدء</th>
+                            <th>وقت الانتهاء</th>
                             <th>الاستراحة بعدها (بالدقائق)</th>
                         </tr>
                     </thead>
@@ -262,13 +276,13 @@
                 </table>
 
                 <div class="checkbox-group">
-    <input type="checkbox" id="adjustEvenPeriods" checked>
-    <label for="adjustEvenPeriods" 
-           title="عند وجود مقرر ذو ساعة اتصال واحدة فقط في محاضرة ما، فسيقوم النظام بإضافة دقيقة واحدة لكي لا يتعارض مع مقرر فردي في المحاضرة السابقة" 
-           style="cursor: help; border-bottom: 1px dashed #856404; padding-bottom: 2px;">
-        إضافة دقيقة للمحاضرات الفردية (تفادياً للتعارض)
-    </label>
-</div>
+                    <input type="checkbox" id="adjustEvenPeriods" checked>
+                    <label for="adjustEvenPeriods" 
+                           title="عند وجود مقرر ذو ساعة اتصال واحدة فقط في محاضرة ما، فسيقوم النظام بإضافة دقيقة واحدة لكي لا يتعارض مع مقرر فردي في المحاضرة السابقة" 
+                           style="cursor: help; border-bottom: 1px dashed #856404; padding-bottom: 2px;">
+                        إضافة دقيقة للمحاضرات الفردية (تفادياً للتعارض)
+                    </label>
+                </div>
             </div>
 
             <div class="btn-group">
