@@ -25,7 +25,29 @@
             box-shadow: 0 8px 20px rgba(0,0,0,0.1);
             max-width: 650px;
             width: 100%;
+            position: relative;
         }
+
+.youtube-btn {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    width: 50px;
+    height: 50px;
+    background: #FF0000;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-decoration: none;
+    box-shadow: 0 4px 10px rgba(0,0,0,.2);
+    transition: all .25s ease;
+}
+
+.youtube-btn:hover {
+    transform: scale(1.1);
+    background: #cc0000;
+}
         h1 {
             text-align: center;
             color: #2c3e50;
@@ -215,8 +237,14 @@
 <body>
 
     <div class="container">
-        <h1>أداة دمج جداول المحاضرات</h1>
-        
+ 
+<a href="https://www.youtube.com/" target="_blank" class="youtube-btn" title="قناة اليوتيوب">
+    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="white">
+        <path d="M23.5 6.2c-.3-1.2-1.2-2.1-2.4-2.4C19 3.2 12 3.2 12 3.2s-7 0-9.1.6C1.7 4.1.8 5 .5 6.2 0 8.3 0 12 0 12s0 3.7.5 5.8c.3 1.2 1.2 2.1 2.4 2.4C5 20.8 12 20.8 12 20.8s7 0 9.1-.6c1.2-.3 2.1-1.2 2.4-2.4.5-2.1.5-5.8.5-5.8s0-3.7-.5-5.8zM9.6 15.5V8.5L15.8 12l-6.2 3.5z"/>
+    </svg>
+</a>
+
+<h1>أداة دمج جداول المحاضرات</h1> 
         <!-- الخطوة 1: رفع الملفات -->
         <div id="step1" class="step active">
             <h2 class="step-title">الخطوة 1: رفع الملفات الأساسية 📁</h2>
@@ -234,7 +262,7 @@
                 <input type="file" id="timetables_file" accept=".csv, .xlsx, .xml, .xls">
             </div>
 
-            <button class="btn-process" onclick="goToStep2()">التالي: إعداد أوقات المحاضرات ➡️</button>
+            <button class="btn-process" onclick="goToStep2()">التالي: إعداد أوقات المحاضرات</button>
             <div id="step1-status" class="status-msg"></div>
         </div>
 
@@ -286,7 +314,7 @@
             </div>
 
             <div class="btn-group">
-                <button class="btn-process btn-secondary" onclick="goToStep1()">⬅️ السابق</button>
+                <button class="btn-process btn-secondary" onclick="goToStep1()">السابق</button>
                 <button class="btn-process" id="processBtn" onclick="processFiles()">استخراج الجدول النهائي 🚀</button>
             </div>
             
