@@ -87,17 +87,17 @@
         <h1>أداة دمج جداول المحاضرات</h1>
         
         <div class="upload-group">
-            <label for="ss01_file">1. نأمل رفع تقرير المقررات (SS01) 📄</label>
+            <label for="ss01_file">1. نأمل رفع تقرير جداول الوحدة التدريبية طولي  (SS01) 📖</label>
             <input type="file" id="ss01_file" accept=".csv, .xlsx, .xls">
         </div>
 
         <div class="upload-group">
-            <label for="rayat_file">2. نأمل رفع ملف الجدول (RayatAuto) 📄</label>
+            <label for="rayat_file">2. نأمل رفع ملف الجدول (RayatAuto) 🚀</label>
             <input type="file" id="rayat_file" accept=".csv, .xlsx, .xls">
         </div>
 
         <div class="upload-group">
-            <label for="sl03_file">3. نأمل رفع تقرير المدربين (SL03) 👨‍🏫</label>
+            <label for="sl03_file">3. نأمل رفع تقرير أعضاء هيئة التدريب  (SL03) 👨‍🏫</label>
             <input type="file" id="sl03_file" accept=".csv, .xlsx, .xls">
         </div>
 
@@ -331,12 +331,14 @@
                 });
 
                 let newSheet = XLSX.utils.json_to_sheet(finalData);
+                newSheet['!views'] = [{ rightToLeft: true }];
                 let newWorkbook = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(newWorkbook, newSheet, "الجدول النهائي");
 
                 XLSX.writeFile(newWorkbook, "RayatAuto_New.xlsx");
-                statusDiv.innerHTML = "<span class='success'> تم دمج البيانات بنجاح! (" + finalData.length + " صف)</span>";
-
+                statusDiv.innerHTML =
+                `<span class="success">تم دمج البيانات بنجاح!</span><br>
+                 <span>عدد الصفوف: ${finalData.length}</span>`;
             } catch (error) {
                 console.error(error);
                 statusDiv.innerHTML = "<span class='error'>حدث خطأ أثناء المعالجة: " + error.message + "</span>";
