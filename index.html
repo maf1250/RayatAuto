@@ -329,12 +329,13 @@
                         "نوع المحاضرة": lectureType
                     });
                 });
-
                 let newSheet = XLSX.utils.json_to_sheet(finalData);
-                newSheet['!views'] = [{ rightToLeft: true }];
+                newSheet['!views'] = [{
+                RTL: true,
+                rightToLeft: true
+                }];
                 let newWorkbook = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(newWorkbook, newSheet, "الجدول النهائي");
-
                 XLSX.writeFile(newWorkbook, "RayatAuto_New.xlsx");
                 statusDiv.innerHTML =
                 `<span class="success">تم دمج البيانات بنجاح!</span><br>
