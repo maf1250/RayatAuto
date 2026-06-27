@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>أداة دمج جداول المحاضرات</title>
+    <title>أداة دمج جداول المحاضرات الذكية</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
@@ -32,10 +32,10 @@
             margin-bottom: 30px;
         }
         .upload-group {
-            margin-bottom: 25px;
+            margin-bottom: 20px;
             background: #f8f9fa;
             border: 2px dashed #ced4da;
-            padding: 20px;
+            padding: 15px;
             border-radius: 8px;
             text-align: center;
         }
@@ -44,6 +44,7 @@
             font-weight: 600;
             margin-bottom: 10px;
             color: #495057;
+            font-size: 16px;
         }
         input[type="file"] {
             display: block;
@@ -51,7 +52,7 @@
             font-family: inherit;
         }
         .btn-process {
-            background-color: #28a745;
+            background-color: #0056b3;
             color: #fff;
             border: none;
             padding: 15px 20px;
@@ -62,12 +63,13 @@
             cursor: pointer;
             transition: 0.3s;
             font-family: 'Cairo', sans-serif;
+            margin-top: 10px;
         }
         .btn-process:hover {
-            background-color: #218838;
+            background-color: #004494;
         }
         .btn-process:disabled {
-            background-color: #a5d8b2;
+            background-color: #99badd;
             cursor: not-allowed;
         }
         #status {
@@ -77,33 +79,35 @@
         }
         .success { color: #28a745; }
         .error { color: #dc3545; }
-        .note { font-size: 13px; color: #6c757d; margin-top: 5px; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>أداة دمج جداول المحاضرات (RayatAuto & SS01)</h1>
+        <h1>أداة دمج جداول المحاضرات</h1>
         
         <div class="upload-group">
-            <label for="ss01_file">1. ارفع تقرير (ss01) 📄</label>
+            <label for="ss01_file">1. نأمل رفع تقرير المقررات (SS01) 📄</label>
             <input type="file" id="ss01_file" accept=".csv, .xlsx, .xls">
-            <div class="note">يدعم ملفات الإكسل و CSV</div>
         </div>
 
         <div class="upload-group">
-            <label for="rayat_file">2. ارفع ملف (RayatAuto) 📄</label>
+            <label for="rayat_file">2. نأمل رفع ملف الجدول (RayatAuto) 📄</label>
             <input type="file" id="rayat_file" accept=".csv, .xlsx, .xls">
-            <div class="note">يدعم ملفات الإكسل و CSV</div>
         </div>
 
-        <button class="btn-process" id="processBtn" onclick="processFiles()">معالجة واستخراج الملف الجديد</button>
+        <div class="upload-group">
+            <label for="sl03_file">3. نأمل رفع تقرير المدربين (SL03) 👨‍🏫</label>
+            <input type="file" id="sl03_file" accept=".csv, .xlsx, .xls">
+        </div>
+
+        <button class="btn-process" id="processBtn" onclick="processFiles()">معالجة واستخراج الملف النهائي</button>
         
         <div id="status"></div>
     </div>
 
     <script>
-        // دالة ذكية لقراءة الملفات وتفكيك ترميز CSV العربي وتنظيف المسافات
+        // قراءة الملفات
         function readFileAsync(file) {
             return new Promise((resolve, reject) => {
                 let reader = new FileReader();
@@ -113,10 +117,8 @@
                     try {
                         let workbook;
                         if (isCSV) {
-                            // قراءة النص مباشرة لمعالجة ترميز CSV
                             workbook = XLSX.read(e.target.result, {type: 'string'});
                         } else {
-                            // قراءة كبيانات ثنائية للإكسل
                             let data = new Uint8Array(e.target.result);
                             workbook = XLSX.read(data, {type: 'array'});
                         }
@@ -125,7 +127,6 @@
                         let worksheet = workbook.Sheets[firstSheetName];
                         let json = XLSX.utils.sheet_to_json(worksheet, {defval: ""});
 
-                        // تنظيف أسماء الأعمدة (حذف المسافات الزائدة في البداية والنهاية)
                         let cleanedJson = json.map(row => {
                             let newRow = {};
                             for (let key in row) {
@@ -141,16 +142,52 @@
                 };
                 reader.onerror = reject;
 
-                if (isCSV) {
-                    // استخدام ترميز ويندوز-1256 الخاص بالأنظمة العربية
-                    reader.readAsText(file, 'windows-1256');
-                } else {
-                    reader.readAsArrayBuffer(file);
-                }
+                if (isCSV) reader.readAsText(file, 'windows-1256');
+                else reader.readAsArrayBuffer(file);
             });
         }
 
-        // دالة تحديد المقرر العملي
+        // دالة تنظيف وتوحيد الأسماء العربية
+        function normalizeArabicName(name) {
+            if (!name) return "";
+            return name.replace(/[أإآ]/g, 'ا')
+                       .replace(/ة/g, 'ه')
+                       .replace(/ى/g, 'ي')
+                       .replace(/ عبد /g, ' عبد') // لتوحيد مثل "عبد الله" و "عبدالله"
+                       .trim();
+        }
+
+        // خوارزمية التطابق الذكي للأسماء (ثنائي، ثلاثي، رباعي)
+        function isNameMatch(name1, name2) {
+            if (!name1 || !name2) return false;
+            let n1 = normalizeArabicName(name1);
+            let n2 = normalizeArabicName(name2);
+
+            if (n1 === n2) return true; // تطابق تام
+
+            let parts1 = n1.split(/\s+/);
+            let parts2 = n2.split(/\s+/);
+
+            let [shorter, longer] = parts1.length < parts2.length ? [parts1, parts2] : [parts2, parts1];
+
+            // 1. إذا كانت كل كلمات الاسم الأقصر موجودة في الاسم الأطول
+            let allPartsMatch = shorter.every(part => longer.includes(part));
+            if (allPartsMatch && shorter.length >= 2) return true;
+
+            // 2. إذا كان الاسم الأول والاسم الأخير متطابقين (مفيد جداً للأسماء الثنائية مقابل الرباعية)
+            if (shorter.length >= 2 && longer.length >= 2) {
+                let shorterFirst = shorter[0];
+                let shorterLast = shorter[shorter.length - 1];
+                let longerFirst = longer[0];
+                let longerLast = longer[longer.length - 1];
+
+                if (shorterFirst === longerFirst && shorterLast === longerLast) return true;
+            }
+
+            return false;
+        }
+
+        // دالة تحديد العملي والنظري
         function isPractical(courseName, courseCode) {
             let name = String(courseName || "").trim();
             let code = String(courseCode || "").trim();
@@ -159,7 +196,7 @@
             return false;
         }
 
-        // دالة تنظيف واستخراج رمز المقرر (حروف وأرقام فقط)
+        // تنظيف رمز المقرر
         function extractCourseBase(str) {
             if (!str) return "";
             let cleaned = str.toString().replace(/\(ع\)/g, '').replace(/ ع /g, ' ').replace(/عملي/g, '').replace(/نظري/g, '');
@@ -173,95 +210,139 @@
         async function processFiles() {
             let ss01File = document.getElementById('ss01_file').files[0];
             let rayatFile = document.getElementById('rayat_file').files[0];
+            let sl03File = document.getElementById('sl03_file').files[0];
+            
             let statusDiv = document.getElementById('status');
             let btn = document.getElementById('processBtn');
 
-            if (!ss01File || !rayatFile) {
-                statusDiv.innerHTML = "<span class='error'>الرجاء رفع كلا الملفين أولاً!</span>";
+            if (!ss01File || !rayatFile || !sl03File) {
+                statusDiv.innerHTML = "<span class='error'>نأمل رفع الملفات الثلاثة أولاً!</span>";
                 return;
             }
 
             try {
                 btn.disabled = true;
-                btn.innerText = "جاري المعالجة...";
+                btn.innerText = "جاري الدمج بذكاء...";
                 statusDiv.innerHTML = "";
 
                 let ss01Data = await readFileAsync(ss01File);
                 let rayatData = await readFileAsync(rayatFile);
-
-                if (rayatData.length === 0) {
-                    statusDiv.innerHTML = "<span class='error'>ملف RayatAuto لا يحتوي على بيانات أو أن الصيغة غير مدعومة! (يرجى حفظه كـ XLSX للتجربة).</span>";
-                    return;
-                }
+                let sl03Data = await readFileAsync(sl03File);
 
                 let finalData = [];
+                let sectionToCRN = {}; 
+                let usedSs01Rows = new Set(); 
 
                 rayatData.forEach(row => {
-                    // إذا كان الصف فارغاً نتجاهله
                     if (!row['اسم المقرر'] && !row['رمز المقرر']) return;
 
                     let rCourseName = String(row['اسم المقرر'] || "").trim();
                     let rCourseCode = String(row['رمز المقرر'] || "").trim();
-                    let rTrainer = String(row['اسم المدرب'] || row['اسم المدرس'] || "").trim();
+                    let rTrainer = String(row['اسم المدرب'] || "").trim();
+                    let rSection = String(row['الشعبة'] || "").trim();
                     
                     let isPrac = isPractical(rCourseName, rCourseCode);
                     let lectureType = isPrac ? 'عملي' : 'نظري';
-                    
                     let rBase = extractCourseBase(rCourseCode) || extractCourseBase(rCourseName);
 
-                    let matchedRow = ss01Data.find(sRow => {
-                        let sTrainer = String(sRow['اسم المدرب'] || sRow['المدرب'] || sRow['اسم المدرس'] || "").trim();
-                        let sType = String(sRow['نوع الجدولة'] || sRow['نوع الشعبة'] || "").trim();
-                        let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
+                    // ============================================
+                    // 1. البحث عن رقم المدرب بذكاء من ملف SL03
+                    // ============================================
+                    let fetchedTrainerId = "";
+                    if (rTrainer) {
+                        let matchedSl03 = sl03Data.find(slRow => {
+                            let slTrainerName = String(slRow['اسم المدرب'] || slRow['اسم الموظف'] || slRow['الاسم'] || "").trim();
+                            return isNameMatch(rTrainer, slTrainerName);
+                        });
+                        if (matchedSl03) {
+                            // التعديل هنا: البحث عن عمود 'رقم الحاسب' كما هو في صورتك المرفقة
+                            fetchedTrainerId = matchedSl03['رقم الحاسب'] || matchedSl03['رقم المدرب'] || matchedSl03['رقم الموظف'] || matchedSl03['الرقم الوظيفي'] || "";
+                        }
+                    }
+
+                    // ============================================
+                    // 2. البحث عن الرقم المرجعي من ملف ss01
+                    // ============================================
+                    let groupKey = rBase + "|" + lectureType + "|" + rSection;
+                    let matchedSs01Row = null;
+
+                    if (sectionToCRN[groupKey] !== undefined) {
+                        matchedSs01Row = ss01Data[sectionToCRN[groupKey]];
+                    } else {
+                        let bestMatchIndex = -1;
                         
-                        let trainerMatch = (sTrainer === rTrainer) || (sTrainer && rTrainer && (sTrainer.includes(rTrainer) || rTrainer.includes(sTrainer)));
-                        let codeMatch = (sBase === rBase);
-                        
-                        let typeMatch = false;
-                        if (isPrac && sType.includes('عملي')) typeMatch = true;
-                        if (!isPrac && sType.includes('نظري')) typeMatch = true;
-                        if (!sType) typeMatch = true; // في حال عدم وجود عمود للنوع نعتبره متطابقاً
+                        // محاولة البحث بالاسم الذكي أولاً
+                        bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
+                            if (usedSs01Rows.has(idx)) return false; 
+                            
+                            let sTrainer = String(sRow['اسم المدرب'] || sRow['المدرب'] || "").trim();
+                            let sType = String(sRow['نوع الجدولة'] || sRow['نوع الشعبة'] || "").trim();
+                            let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
+                            
+                            if (sBase !== rBase) return false;
+                            
+                            let typeMatch = (!sType) || (isPrac && sType.includes('عملي')) || (!isPrac && sType.includes('نظري'));
+                            if (!typeMatch) return false;
 
-                        return trainerMatch && codeMatch && typeMatch;
-                    });
+                            return isNameMatch(sTrainer, rTrainer); // استخدام الذكاء هنا أيضاً
+                        });
 
-                    let fetchedCRN = matchedRow ? (matchedRow['الرقم المرجعي'] || matchedRow['CRN'] || "") : "";
-                    let fetchedTrainerId = matchedRow ? (matchedRow['رقم المدرب'] || matchedRow['رقم الموظف'] || "") : "";
+                        // إذا كان اسم المدرب فارغاً في ss01 نبحث بدون مدرب
+                        if (bestMatchIndex === -1) {
+                            bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
+                                if (usedSs01Rows.has(idx)) return false;
+                                
+                                let sType = String(sRow['نوع الجدولة'] || sRow['نوع الشعبة'] || "").trim();
+                                let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
+                                
+                                if (sBase !== rBase) return false;
+                                
+                                let typeMatch = (!sType) || (isPrac && sType.includes('عملي')) || (!isPrac && sType.includes('نظري'));
+                                return typeMatch;
+                            });
+                        }
 
+                        if (bestMatchIndex !== -1) {
+                            sectionToCRN[groupKey] = bestMatchIndex;
+                            usedSs01Rows.add(bestMatchIndex); 
+                            matchedSs01Row = ss01Data[bestMatchIndex];
+                        }
+                    }
+
+                    let fetchedCRN = matchedSs01Row ? (matchedSs01Row['الرقم المرجعي'] || matchedSs01Row['CRN'] || "") : "";
+
+                    // ============================================
+                    // 3. تكوين الصف النهائي
+                    // ============================================
                     finalData.push({
                         "الفصل التدريبي": row['الفصل التدريبي'] || "",
-                        "الرقم المرجعي": fetchedCRN || row['الرقم المرجعي'] || "",
+                        "الرقم المرجعي": fetchedCRN,
                         "اليوم": row['اليوم'] || "",
                         "الوقت": row['الوقت'] || "",
                         "المبنى": row['المبنى'] || "",
                         "القاعة": row['القاعة'] || "",
-                        "رقم المدرب": fetchedTrainerId || row['رقم المدرب'] || row['رقم المدرس'] || "",
+                        "رقم المدرب": fetchedTrainerId,
                         "اسم المدرب": rTrainer,
                         "اسم المقرر": rCourseName,
                         "رمز المقرر": rCourseCode,
-                        "الشعبة": row['الشعبة'] || "",
+                        "الشعبة": rSection,
                         "نوع المحاضرة": lectureType
                     });
                 });
-
-                if (finalData.length === 0) {
-                    statusDiv.innerHTML = "<span class='error'>حدث خطأ: لم يتم العثور على أعمدة متطابقة للبيانات!</span>";
-                    return;
-                }
 
                 let newSheet = XLSX.utils.json_to_sheet(finalData);
                 let newWorkbook = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(newWorkbook, newSheet, "الجدول النهائي");
 
                 XLSX.writeFile(newWorkbook, "RayatAuto_New.xlsx");
-                statusDiv.innerHTML = "<span class='success'> تم دمج البيانات وتحميل الملف بنجاح! (" + finalData.length + " صف)</span>";
+                statusDiv.innerHTML = "<span class='success'> تم دمج البيانات بنجاح! (" + finalData.length + " صف)</span>";
 
             } catch (error) {
                 console.error(error);
                 statusDiv.innerHTML = "<span class='error'>حدث خطأ أثناء المعالجة: " + error.message + "</span>";
             } finally {
                 btn.disabled = false;
-                btn.innerText = "معالجة واستخراج الملف الجديد";
+                btn.innerText = "معالجة واستخراج الملف النهائي";
             }
         }
     </script>
