@@ -6,6 +6,7 @@
     <title>أداة دمج جداول المحاضرات الذكية</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
 
     <style>
         body {
@@ -329,14 +330,58 @@
                         "نوع المحاضرة": lectureType
                     });
                 });
-                let newSheet = XLSX.utils.json_to_sheet(finalData);
-                newSheet['!views'] = [{
-                RTL: true,
-                rightToLeft: true
-                }];
-                let newWorkbook = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(newWorkbook, newSheet, "الجدول النهائي");
-                XLSX.writeFile(newWorkbook, "RayatAuto_New.xlsx");
+// إنشاء ملف Excel باستخدام ExcelJS
+const workbook = new ExcelJS.Workbook();
+const worksheet = workbook.addWorksheet("الجدول النهائي", {
+    views: [{ rightToLeft: true }]
+});
+
+// الأعمدة
+worksheet.columns = [
+    { header: "الفصل التدريبي", key: "الفصل التدريبي" },
+    { header: "الرقم المرجعي", key: "الرقم المرجعي" },
+    { header: "اليوم", key: "اليوم" },
+    { header: "الوقت", key: "الوقت" },
+    { header: "المبنى", key: "المبنى" },
+    { header: "القاعة", key: "القاعة" },
+    { header: "رقم المدرب", key: "رقم المدرب" },
+    { header: "اسم المدرب", key: "اسم المدرب" },
+    { header: "اسم المقرر", key: "اسم المقرر" },
+    { header: "رمز المقرر", key: "رمز المقرر" },
+    { header: "الشعبة", key: "الشعبة" },
+    { header: "نوع المحاضرة", key: "نوع المحاضرة" }
+];
+
+// إضافة البيانات
+finalData.forEach(row => worksheet.addRow(row));
+
+// جعل عرض الأعمدة تلقائياً
+worksheet.columns.forEach(column => {
+    let maxLength = column.header.length;
+
+    column.eachCell({ includeEmpty: true }, cell => {
+        const len = cell.value ? cell.value.toString().length : 0;
+        if (len > maxLength) maxLength = len;
+    });
+
+    column.width = maxLength + 3;
+});
+
+// حفظ الملف
+const buffer = await workbook.xlsx.writeBuffer();
+
+const blob = new Blob(
+    [buffer],
+    {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    }
+);
+
+const link = document.createElement("a");
+link.href = URL.createObjectURL(blob);
+link.download = "RayatAuto_New.xlsx";
+link.click();
+URL.revokeObjectURL(link.href);
                 statusDiv.innerHTML =
                 `<span class="success">تم دمج البيانات بنجاح!</span><br>
                  <span>عدد الصفوف: ${finalData.length}</span>`;
