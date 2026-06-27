@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>أداة دمج جداول المحاضرات</title>
-    <!-- استدعاء خط كايرو من جوجل -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
-    <!-- استدعاء مكتبة SheetJS للتعامل مع ملفات الإكسل -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
@@ -79,6 +77,7 @@
         }
         .success { color: #28a745; }
         .error { color: #dc3545; }
+        .note { font-size: 13px; color: #6c757d; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -87,13 +86,15 @@
         <h1>أداة دمج جداول المحاضرات (RayatAuto & SS01)</h1>
         
         <div class="upload-group">
-            <label for="ss01_file">1. نأمل رفع تقرير (SS01) 📄</label>
-            <input type="file" id="ss01_file" accept=".xlsx, .csv, .xls">
+            <label for="ss01_file">1. ارفع تقرير (ss01) 📄</label>
+            <input type="file" id="ss01_file" accept=".csv, .xlsx, .xls">
+            <div class="note">يدعم ملفات الإكسل و CSV</div>
         </div>
 
         <div class="upload-group">
-            <label for="rayat_file">2. نأمل رفع ملف (RayatAuto) 📄</label>
-            <input type="file" id="rayat_file" accept=".xlsx, .csv, .xls">
+            <label for="rayat_file">2. ارفع ملف (RayatAuto) 📄</label>
+            <input type="file" id="rayat_file" accept=".csv, .xlsx, .xls">
+            <div class="note">يدعم ملفات الإكسل و CSV</div>
         </div>
 
         <button class="btn-process" id="processBtn" onclick="processFiles()">معالجة واستخراج الملف الجديد</button>
@@ -102,25 +103,54 @@
     </div>
 
     <script>
-        // دالة لقراءة الملف وتحويله إلى JSON
+        // دالة ذكية لقراءة الملفات وتفكيك ترميز CSV العربي وتنظيف المسافات
         function readFileAsync(file) {
             return new Promise((resolve, reject) => {
                 let reader = new FileReader();
+                let isCSV = file.name.toLowerCase().endsWith('.csv');
+
                 reader.onload = function(e) {
-                    let data = new Uint8Array(e.target.result);
-                    let workbook = XLSX.read(data, {type: 'array'});
-                    let firstSheetName = workbook.SheetNames[0];
-                    let worksheet = workbook.Sheets[firstSheetName];
-                    // إرجاع البيانات كمصفوفة كائنات
-                    let json = XLSX.utils.sheet_to_json(worksheet, {defval: ""});
-                    resolve(json);
+                    try {
+                        let workbook;
+                        if (isCSV) {
+                            // قراءة النص مباشرة لمعالجة ترميز CSV
+                            workbook = XLSX.read(e.target.result, {type: 'string'});
+                        } else {
+                            // قراءة كبيانات ثنائية للإكسل
+                            let data = new Uint8Array(e.target.result);
+                            workbook = XLSX.read(data, {type: 'array'});
+                        }
+
+                        let firstSheetName = workbook.SheetNames[0];
+                        let worksheet = workbook.Sheets[firstSheetName];
+                        let json = XLSX.utils.sheet_to_json(worksheet, {defval: ""});
+
+                        // تنظيف أسماء الأعمدة (حذف المسافات الزائدة في البداية والنهاية)
+                        let cleanedJson = json.map(row => {
+                            let newRow = {};
+                            for (let key in row) {
+                                newRow[key.toString().trim()] = row[key];
+                            }
+                            return newRow;
+                        });
+
+                        resolve(cleanedJson);
+                    } catch (err) {
+                        reject(err);
+                    }
                 };
                 reader.onerror = reject;
-                reader.readAsArrayBuffer(file);
+
+                if (isCSV) {
+                    // استخدام ترميز ويندوز-1256 الخاص بالأنظمة العربية
+                    reader.readAsText(file, 'windows-1256');
+                } else {
+                    reader.readAsArrayBuffer(file);
+                }
             });
         }
 
-        // دالة لتحديد ما إذا كان المقرر عملي
+        // دالة تحديد المقرر العملي
         function isPractical(courseName, courseCode) {
             let name = String(courseName || "").trim();
             let code = String(courseCode || "").trim();
@@ -129,15 +159,12 @@
             return false;
         }
 
-        // دالة لاستخراج الحروف والأرقام فقط لتوحيد صيغة رمز المقرر (تتجاهل الفواصل والأقواس)
+        // دالة تنظيف واستخراج رمز المقرر (حروف وأرقام فقط)
         function extractCourseBase(str) {
             if (!str) return "";
-            // إزالة الكلمات الدلالية للعملي
-            let cleaned = str.replace(/\(ع\)/g, '').replace(/ ع /g, ' ').replace(/عملي/g, '').replace(/نظري/g, '');
-            // استخراج الحروف (عربي/انجليزي)
+            let cleaned = str.toString().replace(/\(ع\)/g, '').replace(/ ع /g, ' ').replace(/عملي/g, '').replace(/نظري/g, '');
             let lettersMatch = cleaned.match(/[a-zA-Zأ-ي]+/g);
             let letters = lettersMatch ? lettersMatch.join('') : '';
-            // استخراج الأرقام
             let numbersMatch = cleaned.match(/\d+/g);
             let numbers = numbersMatch ? numbersMatch.join('') : '';
             return letters + numbers; 
@@ -159,50 +186,48 @@
                 btn.innerText = "جاري المعالجة...";
                 statusDiv.innerHTML = "";
 
-                // قراءة الملفين
                 let ss01Data = await readFileAsync(ss01File);
                 let rayatData = await readFileAsync(rayatFile);
 
+                if (rayatData.length === 0) {
+                    statusDiv.innerHTML = "<span class='error'>ملف RayatAuto لا يحتوي على بيانات أو أن الصيغة غير مدعومة! (يرجى حفظه كـ XLSX للتجربة).</span>";
+                    return;
+                }
+
                 let finalData = [];
 
-                // معالجة بيانات RayatAuto صفا بصف
                 rayatData.forEach(row => {
-                    let rCourseName = row['اسم المقرر'];
-                    let rCourseCode = row['رمز المقرر'];
-                    let rTrainer = String(row['اسم المدرب'] || "").trim();
+                    // إذا كان الصف فارغاً نتجاهله
+                    if (!row['اسم المقرر'] && !row['رمز المقرر']) return;
+
+                    let rCourseName = String(row['اسم المقرر'] || "").trim();
+                    let rCourseCode = String(row['رمز المقرر'] || "").trim();
+                    let rTrainer = String(row['اسم المدرب'] || row['اسم المدرس'] || "").trim();
                     
                     let isPrac = isPractical(rCourseName, rCourseCode);
                     let lectureType = isPrac ? 'عملي' : 'نظري';
                     
                     let rBase = extractCourseBase(rCourseCode) || extractCourseBase(rCourseName);
 
-                    // البحث في ملف ss01 عن تطابق
                     let matchedRow = ss01Data.find(sRow => {
-                        let sTrainer = String(sRow['اسم المدرب'] || sRow['المدرب'] || "").trim();
+                        let sTrainer = String(sRow['اسم المدرب'] || sRow['المدرب'] || sRow['اسم المدرس'] || "").trim();
                         let sType = String(sRow['نوع الجدولة'] || sRow['نوع الشعبة'] || "").trim();
-                        let sBase = extractCourseBase(sRow['رمز المقرر']) || extractCourseBase(sRow['اسم المقرر'] || sRow['المقرر']);
+                        let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
                         
-                        // شرط تطابق اسم المدرب (تطابق جزئي أو كلي لتفادي مشاكل المسافات)
                         let trainerMatch = (sTrainer === rTrainer) || (sTrainer && rTrainer && (sTrainer.includes(rTrainer) || rTrainer.includes(sTrainer)));
-                        
-                        // شرط تطابق رمز المقرر الأساسي (مثلا "حاسب121" == "حاسب121")
                         let codeMatch = (sBase === rBase);
                         
-                        // شرط تطابق النوع (عملي مع عملي، نظري مع نظري)
                         let typeMatch = false;
                         if (isPrac && sType.includes('عملي')) typeMatch = true;
                         if (!isPrac && sType.includes('نظري')) typeMatch = true;
-                        // إذا كان عمود الجدولة فارغ في التقرير نعتبره متطابق لتفادي فقدان البيانات
-                        if (!sType) typeMatch = true;
+                        if (!sType) typeMatch = true; // في حال عدم وجود عمود للنوع نعتبره متطابقاً
 
                         return trainerMatch && codeMatch && typeMatch;
                     });
 
-                    // جلب الرقم المرجعي ورقم المدرب من ss01 إن وجد
                     let fetchedCRN = matchedRow ? (matchedRow['الرقم المرجعي'] || matchedRow['CRN'] || "") : "";
                     let fetchedTrainerId = matchedRow ? (matchedRow['رقم المدرب'] || matchedRow['رقم الموظف'] || "") : "";
 
-                    // تكوين الصف النهائي بالترتيب المطلوب
                     finalData.push({
                         "الفصل التدريبي": row['الفصل التدريبي'] || "",
                         "الرقم المرجعي": fetchedCRN || row['الرقم المرجعي'] || "",
@@ -210,24 +235,26 @@
                         "الوقت": row['الوقت'] || "",
                         "المبنى": row['المبنى'] || "",
                         "القاعة": row['القاعة'] || "",
-                        "رقم المدرب": fetchedTrainerId || row['رقم المدرب'] || "",
-                        "اسم المدرب": row['اسم المدرب'] || "",
-                        "اسم المقرر": row['اسم المقرر'] || "",
-                        "رمز المقرر": row['رمز المقرر'] || "",
+                        "رقم المدرب": fetchedTrainerId || row['رقم المدرب'] || row['رقم المدرس'] || "",
+                        "اسم المدرب": rTrainer,
+                        "اسم المقرر": rCourseName,
+                        "رمز المقرر": rCourseCode,
                         "الشعبة": row['الشعبة'] || "",
                         "نوع المحاضرة": lectureType
                     });
                 });
 
-                // تحويل البيانات الجديدة إلى شيت إكسل
+                if (finalData.length === 0) {
+                    statusDiv.innerHTML = "<span class='error'>حدث خطأ: لم يتم العثور على أعمدة متطابقة للبيانات!</span>";
+                    return;
+                }
+
                 let newSheet = XLSX.utils.json_to_sheet(finalData);
                 let newWorkbook = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(newWorkbook, newSheet, "الجدول النهائي");
 
-                // تحميل الملف
-                XLSX.writeFile(newWorkbook, "Final_Schedule_Merged.xlsx");
-
-                statusDiv.innerHTML = "<span class='success'>✅ تم دمج البيانات وتحميل الملف بنجاح!</span>";
+                XLSX.writeFile(newWorkbook, "RayatAuto_New.xlsx");
+                statusDiv.innerHTML = "<span class='success'> تم دمج البيانات وتحميل الملف بنجاح! (" + finalData.length + " صف)</span>";
 
             } catch (error) {
                 console.error(error);
