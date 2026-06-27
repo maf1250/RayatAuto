@@ -30,8 +30,29 @@
             text-align: center;
             color: #2c3e50;
             font-size: 24px;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
+        .step-title {
+            text-align: center;
+            color: #0056b3;
+            font-size: 18px;
+            margin-bottom: 20px;
+            font-weight: 800;
+        }
+        
+        /* نظام الصفحات */
+        .step {
+            display: none;
+            animation: fadeIn 0.4s ease-in-out;
+        }
+        .step.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         .upload-group {
             margin-bottom: 20px;
             background: #f8f9fa;
@@ -62,7 +83,7 @@
         .settings-group h3 {
             margin-top: 0;
             color: #856404;
-            font-size: 18px;
+            font-size: 16px;
             text-align: center;
         }
         .settings-row {
@@ -79,7 +100,7 @@
             display: block;
             font-weight: 600;
             margin-bottom: 5px;
-            font-size: 14px;
+            font-size: 13px;
         }
         .settings-row input {
             width: 100%;
@@ -88,6 +109,7 @@
             border-radius: 4px;
             font-family: inherit;
             box-sizing: border-box;
+            font-size: 14px;
         }
         .times-table {
             width: 100%;
@@ -99,23 +121,34 @@
         .times-table th, .times-table td {
             border: 1px solid #ccc;
             padding: 6px;
-            font-size: 14px;
+            font-size: 13px;
         }
         .times-table th {
             background: #ffeeba;
         }
-        .times-table input[type="time"] {
-            border: none;
+        .times-table input[type="time"],
+        .times-table input[type="number"] {
+            border: 1px solid #ddd;
+            border-radius: 4px;
             text-align: center;
             font-family: inherit;
-            width: 100%;
+            width: 90%;
             background: transparent;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 600;
+            padding: 4px;
+        }
+        .times-table input[type="number"] {
+            width: 60px;
+        }
+        .times-table input:focus {
+            outline: none;
+            border-color: #0056b3;
+            background: #f8fbff;
         }
         .checkbox-group {
             margin-top: 15px;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
             color: #856404;
             display: flex;
@@ -124,9 +157,14 @@
             justify-content: center;
         }
         .checkbox-group input {
-            width: 18px;
-            height: 18px;
+            width: 16px;
+            height: 16px;
             cursor: pointer;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
         }
         .btn-process {
             background-color: #0056b3;
@@ -135,21 +173,23 @@
             padding: 15px 20px;
             width: 100%;
             border-radius: 8px;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 600;
             cursor: pointer;
             transition: 0.3s;
             font-family: 'Cairo', sans-serif;
-            margin-top: 10px;
+            flex: 1;
         }
-        .btn-process:hover {
-            background-color: #004494;
-        }
-        .btn-process:disabled {
-            background-color: #99badd;
-            cursor: not-allowed;
-        }
-        #status {
+        .btn-process:hover { background-color: #004494; }
+        .btn-process:disabled { background-color: #99badd; cursor: not-allowed; }
+        
+        .btn-secondary { background-color: #6c757d; }
+        .btn-secondary:hover { background-color: #5a6268; }
+
+        .btn-reset { background-color: #17a2b8; width: auto; padding: 10px; margin-bottom:15px; font-size:14px; display: block; margin: 0 auto 15px;}
+        .btn-reset:hover { background-color: #138496; }
+
+        .status-msg {
             text-align: center;
             margin-top: 15px;
             font-weight: 600;
@@ -163,62 +203,115 @@
     <div class="container">
         <h1>أداة دمج جداول المحاضرات 🚀</h1>
         
-        <div class="upload-group">
-            <label for="ss01_file">1. تقرير جداول الوحدة التدريبية طولي (SS01) 📖</label>
-            <input type="file" id="ss01_file" accept=".csv, .xlsx, .xls">
-        </div>
-        <div class="upload-group">
-            <label for="sl03_file">2. تقرير أعضاء هيئة التدريب (SL03) 👨‍🏫</label>
-            <input type="file" id="sl03_file" accept=".csv, .xlsx, .xls">
-        </div>
-        <div class="upload-group">
-            <label for="timetables_file">3. ملف الجدول الخام المستخرج (Timetables) 📅</label>
-            <input type="file" id="timetables_file" accept=".csv, .xlsx, .xml, .xls">
+        <!-- الخطوة 1: رفع الملفات -->
+        <div id="step1" class="step active">
+            <h2 class="step-title">الخطوة 1: رفع الملفات الأساسية 📁</h2>
+            
+            <div class="upload-group">
+                <label for="ss01_file">1. تقرير جداول الوحدة التدريبية طولي (SS01) 📖</label>
+                <input type="file" id="ss01_file" accept=".csv, .xlsx, .xls">
+            </div>
+            <div class="upload-group">
+                <label for="sl03_file">2. تقرير أعضاء هيئة التدريب (SL03) 👨‍🏫</label>
+                <input type="file" id="sl03_file" accept=".csv, .xlsx, .xls">
+            </div>
+            <div class="upload-group">
+                <label for="timetables_file">3. ملف الجدول المستخرج من (aSc Timetables) 📅</label>
+                <input type="file" id="timetables_file" accept=".csv, .xlsx, .xml, .xls">
+            </div>
+
+            <button class="btn-process" onclick="goToStep2()">التالي: إعداد أوقات المحاضرات ➡️</button>
+            <div id="step1-status" class="status-msg"></div>
         </div>
 
-        <div class="settings-group">
-            <h3>إعدادات أوقات المحاضرات 🕒</h3>
-            <div class="settings-row">
-                <div>
-                    <label>وقت بدء المحاضرة الأولى:</label>
-                    <input type="time" id="startTime" value="08:00" onchange="generateTimes()">
+        <!-- الخطوة 2: إعداد الأوقات والمعالجة -->
+        <div id="step2" class="step">
+            <h2 class="step-title">الخطوة 2: إعداد أوقات المحاضرات 🕒</h2>
+            
+            <div class="settings-group">
+                <h3>الإعدادات الافتراضية (لتعبئة الجدول سريعاً)</h3>
+                <div class="settings-row">
+                    <div>
+                        <label>وقت بدء المحاضرة الأولى:</label>
+                        <input type="time" id="startTime" value="08:00" onchange="generateTimes()">
+                    </div>
+                    <div>
+                        <label>مدة المحاضرة (بالدقائق):</label>
+                        <input type="number" id="duration" value="50" min="0" onchange="generateTimes()">
+                    </div>
+                    <div>
+                        <label>الاستراحة (بعد المحاضرات 2 ، 4 ، 6 الخ):</label>
+                        <input type="number" id="defaultBreakTime" value="5" min="0" onchange="generateTimes()">
+                    </div>
                 </div>
-                <div>
-                    <label>مدة المحاضرة (دقائق):</label>
-                    <input type="number" id="duration" value="50" min="10" onchange="generateTimes()">
-                </div>
-                <div>
-                    <label>الاستراحة بين المحاضرات:</label>
-                    <input type="number" id="breakTime" value="10" min="0" onchange="generateTimes()">
-                </div>
+                
+                <button class="btn-process btn-reset" onclick="generateTimes()">إعادة ضبط الجدول بناءً على الافتراضي 🔄</button>
+
+                <table class="times-table">
+                    <thead>
+                        <tr>
+                            <th>المحاضرة</th>
+                            <th>بداية</th>
+                            <th>نهاية</th>
+                            <th>الاستراحة بعدها (بالدقائق)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="timesBody">
+                        <!-- سيتم توليد الأوقات هنا -->
+                    </tbody>
+                </table>
+
+                <div class="checkbox-group">
+    <input type="checkbox" id="adjustEvenPeriods" checked>
+    <label for="adjustEvenPeriods" 
+           title="عند وجود مقرر ذو ساعة اتصال واحدة فقط في محاضرة ما، فسيقوم النظام بإضافة دقيقة واحدة لكي لا يتعارض مع مقرر فردي في المحاضرة السابقة" 
+           style="cursor: help; border-bottom: 1px dashed #856404; padding-bottom: 2px;">
+        إضافة دقيقة للمحاضرات الفردية (تفادياً للتعارض)
+    </label>
+</div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn-process btn-secondary" onclick="goToStep1()">⬅️ السابق</button>
+                <button class="btn-process" id="processBtn" onclick="processFiles()">استخراج الجدول النهائي 🚀</button>
             </div>
             
-            <table class="times-table">
-                <thead>
-                    <tr>
-                        <th>المحاضرة</th>
-                        <th>بداية</th>
-                        <th>نهاية</th>
-                    </tr>
-                </thead>
-                <tbody id="timesBody">
-                    <!-- سيتم توليد الأوقات هنا -->
-                </tbody>
-            </table>
-
-            <div class="checkbox-group">
-                <input type="checkbox" id="adjustEvenPeriods" checked>
-                <label for="adjustEvenPeriods">إضافة دقيقة للحصص الزوجية المفردة (تفادياً للتعارض)</label>
-            </div>
+            <div id="status" class="status-msg"></div>
         </div>
-
-        <button class="btn-process" id="processBtn" onclick="processFiles()">معالجة واستخراج الجدول النهائي</button>
-        
-        <div id="status"></div>
     </div>
 
     <script>
-        // دوال معالجة أوقات المحاضرات
+        // مصفوفة لتخزين أوقات المحاضرات والاستراحات المخصصة لكل محاضرة
+        let timesData = [];
+
+        // التنقل بين الصفحات
+        function goToStep2() {
+            let ss01File = document.getElementById('ss01_file').files[0];
+            let sl03File = document.getElementById('sl03_file').files[0];
+            let timetablesFile = document.getElementById('timetables_file').files[0];
+            let statusDiv = document.getElementById('step1-status');
+
+            if (!ss01File || !timetablesFile || !sl03File) {
+                statusDiv.innerHTML = "<span class='error'>نأمل رفع جميع الملفات أولاً للإنتقال للخطوة التالية!</span>";
+                return;
+            }
+            
+            statusDiv.innerHTML = "";
+            document.getElementById('step1').classList.remove('active');
+            document.getElementById('step2').classList.add('active');
+            
+            // توليد الجدول إذا لم يتم توليده مسبقاً
+            if(timesData.length === 0) {
+                generateTimes();
+            }
+        }
+
+        function goToStep1() {
+            document.getElementById('step2').classList.remove('active');
+            document.getElementById('step1').classList.add('active');
+        }
+
+        // دوال مساعدة للوقت
         function timeToMinutes(timeStr) {
             if(!timeStr) return 0;
             let [h, m] = timeStr.split(':').map(Number);
@@ -231,32 +324,102 @@
             return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
         }
 
+        // توليد الأوقات الأولية بناءً على الإعدادات 
         function generateTimes() {
             let startStr = document.getElementById('startTime').value || "08:00";
-            let duration = parseInt(document.getElementById('duration').value) || 50;
-            let breakTime = parseInt(document.getElementById('breakTime').value) || 10;
+            
+            let durationVal = parseInt(document.getElementById('duration').value);
+            let duration = isNaN(durationVal) ? 50 : durationVal;
+            
+            let breakVal = parseInt(document.getElementById('defaultBreakTime').value);
+            let defaultBreak = isNaN(breakVal) ? 5 : breakVal;
             
             let currentMins = timeToMinutes(startStr);
+            timesData = [];
+            
+            for (let i = 1; i <= 10; i++) {
+                
+                let breakAfter = 0;
+                
+                // تحديد فترة الاستراحة
+                if (i === 10) {
+                    breakAfter = 0; // المحاضرة الأخيرة لا استراحة بعدها
+                } else if (i % 2 !== 0) {
+                    breakAfter = 0; // المحاضرات الفردية (الأولى، الثالثة، الخامسة..) الاستراحة بعدها صفر
+                } else {
+                    breakAfter = defaultBreak; // المحاضرات الزوجية (الثانية، الرابعة، السادسة..) تأخذ الاستراحة الافتراضية
+                }
+                
+                timesData.push({
+                    period: i,
+                    startMins: currentMins,
+                    endMins: currentMins + duration,
+                    breakAfter: breakAfter
+                });
+                
+                currentMins = currentMins + duration + breakAfter;
+            }
+            
+            renderTable();
+        }
+
+        // رسم الجدول بناءً على المصفوفة
+        function renderTable() {
             let tbody = document.getElementById('timesBody');
             tbody.innerHTML = '';
             
-            for (let i = 1; i <= 10; i++) {
-                let startPeriod = currentMins;
-                let endPeriod = startPeriod + duration;
+            timesData.forEach((data, index) => {
+                let breakInputHtml = index < 9 ? 
+                    `<input type="number" min="0" value="${data.breakAfter}" onchange="updateBreak(${index}, this.value)">` 
+                    : '-';
                 
                 tbody.innerHTML += `
                     <tr>
-                        <td><strong>${i}</strong></td>
-                        <td><input type="time" id="start_${i}" value="${minutesToTime(startPeriod)}"></td>
-                        <td><input type="time" id="end_${i}" value="${minutesToTime(endPeriod)}"></td>
+                        <td><strong>${data.period}</strong></td>
+                        <td><input type="time" id="start_${data.period}" value="${minutesToTime(data.startMins)}" onchange="updateStart(${index}, this.value)"></td>
+                        <td><input type="time" id="end_${data.period}" value="${minutesToTime(data.endMins)}" onchange="updateEnd(${index}, this.value)"></td>
+                        <td>${breakInputHtml}</td>
                     </tr>
                 `;
-                
-                currentMins = endPeriod + breakTime;
-            }
+            });
         }
 
-        window.onload = generateTimes; // توليد الأوقات عند فتح الصفحة
+        // تحديث فترة الاستراحة لصف معين وإعادة حساب ما بعده
+        function updateBreak(index, newBreakVal) {
+            let breakMins = parseInt(newBreakVal);
+            if (isNaN(breakMins)) breakMins = 0; // قبول الصفر بأمان
+            
+            timesData[index].breakAfter = breakMins;
+            recalculateFrom(index + 1);
+        }
+
+        // تحديث وقت البداية لصف معين وإعادة حساب ما بعده
+        function updateStart(index, newStartStr) {
+            let startMins = timeToMinutes(newStartStr);
+            let duration = timesData[index].endMins - timesData[index].startMins; 
+            timesData[index].startMins = startMins;
+            timesData[index].endMins = startMins + duration;
+            recalculateFrom(index + 1);
+        }
+
+        // تحديث وقت النهاية لصف معين وإعادة حساب ما بعده
+        function updateEnd(index, newEndStr) {
+            let endMins = timeToMinutes(newEndStr);
+            timesData[index].endMins = endMins;
+            recalculateFrom(index + 1);
+        }
+
+        // دالة الترحيل: إعادة الحساب التلقائي للصفوف التي تلي التعديل
+        function recalculateFrom(startIndex) {
+            for (let i = startIndex; i < timesData.length; i++) {
+                let prev = timesData[i - 1];
+                let duration = timesData[i].endMins - timesData[i].startMins; // نحافظ على مدة كل محاضرة كما هي
+                
+                timesData[i].startMins = prev.endMins + prev.breakAfter;
+                timesData[i].endMins = timesData[i].startMins + duration;
+            }
+            renderTable();
+        }
 
         // قراءة الملفات
         function readFileAsync(file) {
@@ -308,17 +471,14 @@
                        .trim();
         }
 
-        // خوارزمية التطابق الذكي للأسماء (ثنائي، ثلاثي، رباعي)
         function isNameMatch(name1, name2) {
             if (!name1 || !name2) return false;
             let n1 = normalizeArabicName(name1);
             let n2 = normalizeArabicName(name2);
-
             if (n1 === n2) return true;
 
             let parts1 = n1.split(/\s+/);
             let parts2 = n2.split(/\s+/);
-
             let [shorter, longer] = parts1.length < parts2.length ? [parts1, parts2] : [parts2, parts1];
 
             let allPartsMatch = shorter.every(part => longer.includes(part));
@@ -329,14 +489,11 @@
                 let shorterLast = shorter[shorter.length - 1];
                 let longerFirst = longer[0];
                 let longerLast = longer[longer.length - 1];
-
                 if (shorterFirst === longerFirst && shorterLast === longerLast) return true;
             }
-
             return false;
         }
 
-        // دالة تحديد العملي والنظري
         function isPractical(courseName, courseCode) {
             let name = String(courseName || "").trim();
             let code = String(courseCode || "").trim();
@@ -345,7 +502,6 @@
             return false;
         }
 
-        // تنظيف رمز المقرر
         function extractCourseBase(str) {
             if (!str) return "";
             let cleaned = str.toString().replace(/\(ع\)/g, '').replace(/ ع /g, ' ').replace(/عملي/g, '').replace(/نظري/g, '');
@@ -364,21 +520,16 @@
             let statusDiv = document.getElementById('status');
             let btn = document.getElementById('processBtn');
 
-            if (!ss01File || !timetablesFile || !sl03File) {
-                statusDiv.innerHTML = "<span class='error'>نأمل رفع الملفات الثلاثة أولاً!</span>";
-                return;
-            }
-
             try {
                 btn.disabled = true;
-                btn.innerText = "جاري الدمج والمطابقة بذكاء...";
+                btn.innerText = "جارٍ المعالجة واستخراج الجدول ⚙️...";
                 statusDiv.innerHTML = "";
 
                 let ss01Data = await readFileAsync(ss01File);
                 let timetablesData = await readFileAsync(timetablesFile);
                 let sl03Data = await readFileAsync(sl03File);
 
-                // 1. جلب الأوقات من الجدول الظاهر بالواجهة
+                // 1. جلب الأوقات من الجدول الظاهر بالواجهة بعد التعديلات المخصصة
                 let periods = {};
                 for(let i=1; i<=10; i++){
                     periods[i] = {
@@ -431,7 +582,7 @@
                     return a.startP - b.startP;
                 });
 
-                // دمج الفواصل الزمنية المتقاربة بأقل من 65 دقيقة كحصة واحدة
+                // دمج الفواصل الزمنية المتقاربة بأقل من 65 دقيقة كمحاضرة واحدة
                 let mergedLectures = [];
                 for (let i = 0; i < rawLectures.length; i++) {
                     let current = rawLectures[i];
@@ -449,8 +600,8 @@
                             
                             if (currStartMins !== undefined && lastEndMins !== undefined) {
                                 let diff = currStartMins - lastEndMins;
-                                if (diff <= 65 && diff >= 0) { // شرط الدمج
-                                    last.endP = current.endP; // تحديث النهاية
+                                if (diff <= 65 && diff >= 0) {
+                                    last.endP = current.endP; 
                                     if (!last.room && current.room) last.room = current.room;
                                     continue;
                                 }
@@ -460,7 +611,7 @@
                     mergedLectures.push({...current});
                 }
 
-                // 4. دمج الوقت وحساب الدقيقة الإضافية للحصص الزوجية
+                // 4. دمج الوقت وحساب الدقيقة الإضافية للمحاضرات الزوجية
                 let adjustEven = document.getElementById('adjustEvenPeriods').checked;
 
                 mergedLectures.forEach(lec => {
@@ -497,7 +648,6 @@
                     let lectureType = isPrac ? 'عملي' : 'نظري';
                     let rBase = extractCourseBase(rCourseCode) || extractCourseBase(rCourseName);
 
-                    // البحث عن رقم المدرب بذكاء من ملف SL03
                     let fetchedTrainerId = "";
                     if (rTrainer) {
                         let matchedSl03 = sl03Data.find(slRow => {
@@ -509,7 +659,6 @@
                         }
                     }
 
-                    // البحث عن الرقم المرجعي (CRN) من ملف SS01
                     let groupKey = rBase + "|" + lectureType + "|" + rSection;
                     let matchedSs01Row = null;
 
@@ -518,7 +667,6 @@
                     } else {
                         let bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
                             if (usedSs01Rows.has(idx)) return false; 
-                            
                             let sTrainer = String(sRow['اسم المدرب'] || sRow['المدرب'] || "").trim();
                             let sType = String(sRow['نوع الجدولة'] || sRow['نوع الشعبة'] || "").trim();
                             let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
@@ -529,7 +677,6 @@
                             return isNameMatch(sTrainer, rTrainer);
                         });
 
-                        // إذا كان المدرب غير موجود، نبحث بدونه
                         if (bestMatchIndex === -1) {
                             bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
                                 if (usedSs01Rows.has(idx)) return false;
@@ -549,7 +696,6 @@
                     }
 
                     let fetchedCRN = matchedSs01Row ? (matchedSs01Row['الرقم المرجعي'] || matchedSs01Row['CRN'] || "") : "";
-
                     let bld = row.room ? row.room.substring(0, 5) : "";
 
                     finalData.push({
@@ -618,7 +764,7 @@
                 statusDiv.innerHTML = "<span class='error'>حدث خطأ أثناء المعالجة: " + error.message + "</span>";
             } finally {
                 btn.disabled = false;
-                btn.innerText = "معالجة واستخراج الجدول النهائي";
+                btn.innerText = "استخراج الجدول النهائي 🚀";
             }
         }
     </script>
