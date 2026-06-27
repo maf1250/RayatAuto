@@ -23,7 +23,7 @@
             padding: 30px;
             border-radius: 12px;
             box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-            max-width: 600px;
+            max-width: 650px;
             width: 100%;
         }
         h1 {
@@ -51,6 +51,82 @@
             display: block;
             width: 100%;
             font-family: inherit;
+        }
+        .settings-group {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .settings-group h3 {
+            margin-top: 0;
+            color: #856404;
+            font-size: 18px;
+            text-align: center;
+        }
+        .settings-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .settings-row div {
+            flex: 1;
+            min-width: 120px;
+        }
+        .settings-row label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        .settings-row input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+        .times-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: center;
+            background: #fff;
+            margin-bottom: 10px;
+        }
+        .times-table th, .times-table td {
+            border: 1px solid #ccc;
+            padding: 6px;
+            font-size: 14px;
+        }
+        .times-table th {
+            background: #ffeeba;
+        }
+        .times-table input[type="time"] {
+            border: none;
+            text-align: center;
+            font-family: inherit;
+            width: 100%;
+            background: transparent;
+            font-size: 15px;
+            font-weight: 600;
+        }
+        .checkbox-group {
+            margin-top: 15px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #856404;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+        }
+        .checkbox-group input {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
         }
         .btn-process {
             background-color: #0056b3;
@@ -85,28 +161,103 @@
 <body>
 
     <div class="container">
-        <h1>أداة دمج جداول المحاضرات</h1>
-        <SPAN>نأمل رفع الملفات التالية</SPAN>
+        <h1>أداة دمج جداول المحاضرات 🚀</h1>
         
         <div class="upload-group">
             <label for="ss01_file">1. تقرير جداول الوحدة التدريبية طولي (SS01) 📖</label>
             <input type="file" id="ss01_file" accept=".csv, .xlsx, .xls">
         </div>
         <div class="upload-group">
-            <label for="sl03_file">2. تقرير أعضاء هيئة التدريب  (SL03) 👨‍🏫</label>
+            <label for="sl03_file">2. تقرير أعضاء هيئة التدريب (SL03) 👨‍🏫</label>
             <input type="file" id="sl03_file" accept=".csv, .xlsx, .xls">
         </div>
         <div class="upload-group">
-            <label for="rayat_file">3. ملف الجدول (RayatAuto) 🚀</label>
-            <input type="file" id="rayat_file" accept=".csv, .xlsx, .xls">
+            <label for="timetables_file">3. ملف الجدول الخام المستخرج (Timetables) 📅</label>
+            <input type="file" id="timetables_file" accept=".csv, .xlsx, .xls">
         </div>
 
-        <button class="btn-process" id="processBtn" onclick="processFiles()">معالجة واستخراج الملف النهائي</button>
+        <div class="settings-group">
+            <h3>إعدادات أوقات المحاضرات 🕒</h3>
+            <div class="settings-row">
+                <div>
+                    <label>وقت بدء المحاضرة الأولى:</label>
+                    <input type="time" id="startTime" value="08:00" onchange="generateTimes()">
+                </div>
+                <div>
+                    <label>مدة المحاضرة (دقائق):</label>
+                    <input type="number" id="duration" value="50" min="10" onchange="generateTimes()">
+                </div>
+                <div>
+                    <label>الاستراحة بين المحاضرات:</label>
+                    <input type="number" id="breakTime" value="10" min="0" onchange="generateTimes()">
+                </div>
+            </div>
+            
+            <table class="times-table">
+                <thead>
+                    <tr>
+                        <th>المحاضرة</th>
+                        <th>بداية</th>
+                        <th>نهاية</th>
+                    </tr>
+                </thead>
+                <tbody id="timesBody">
+                    <!-- سيتم توليد الأوقات هنا -->
+                </tbody>
+            </table>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="adjustEvenPeriods" checked>
+                <label for="adjustEvenPeriods">إضافة دقيقة للحصص الزوجية المفردة (تفادياً للتعارض)</label>
+            </div>
+        </div>
+
+        <button class="btn-process" id="processBtn" onclick="processFiles()">معالجة واستخراج الجدول النهائي</button>
         
         <div id="status"></div>
     </div>
 
     <script>
+        // دوال معالجة أوقات المحاضرات
+        function timeToMinutes(timeStr) {
+            if(!timeStr) return 0;
+            let [h, m] = timeStr.split(':').map(Number);
+            return (isNaN(h) ? 0 : h) * 60 + (isNaN(m) ? 0 : m);
+        }
+
+        function minutesToTime(mins) {
+            let h = Math.floor(mins / 60) % 24;
+            let m = mins % 60;
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+        }
+
+        function generateTimes() {
+            let startStr = document.getElementById('startTime').value || "08:00";
+            let duration = parseInt(document.getElementById('duration').value) || 50;
+            let breakTime = parseInt(document.getElementById('breakTime').value) || 10;
+            
+            let currentMins = timeToMinutes(startStr);
+            let tbody = document.getElementById('timesBody');
+            tbody.innerHTML = '';
+            
+            for (let i = 1; i <= 10; i++) {
+                let startPeriod = currentMins;
+                let endPeriod = startPeriod + duration;
+                
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${i}</strong></td>
+                        <td><input type="time" id="start_${i}" value="${minutesToTime(startPeriod)}"></td>
+                        <td><input type="time" id="end_${i}" value="${minutesToTime(endPeriod)}"></td>
+                    </tr>
+                `;
+                
+                currentMins = endPeriod + breakTime;
+            }
+        }
+
+        window.onload = generateTimes; // توليد الأوقات عند فتح الصفحة
+
         // قراءة الملفات
         function readFileAsync(file) {
             return new Promise((resolve, reject) => {
@@ -153,7 +304,7 @@
             return name.replace(/[أإآ]/g, 'ا')
                        .replace(/ة/g, 'ه')
                        .replace(/ى/g, 'ي')
-                       .replace(/ عبد /g, ' عبد') // لتوحيد مثل "عبد الله" و "عبدالله"
+                       .replace(/ عبد /g, ' عبد')
                        .trim();
         }
 
@@ -163,18 +314,16 @@
             let n1 = normalizeArabicName(name1);
             let n2 = normalizeArabicName(name2);
 
-            if (n1 === n2) return true; // تطابق تام
+            if (n1 === n2) return true;
 
             let parts1 = n1.split(/\s+/);
             let parts2 = n2.split(/\s+/);
 
             let [shorter, longer] = parts1.length < parts2.length ? [parts1, parts2] : [parts2, parts1];
 
-            // 1. إذا كانت كل كلمات الاسم الأقصر موجودة في الاسم الأطول
             let allPartsMatch = shorter.every(part => longer.includes(part));
             if (allPartsMatch && shorter.length >= 2) return true;
 
-            // 2. إذا كان الاسم الأول والاسم الأخير متطابقين (مفيد جداً للأسماء الثنائية مقابل الرباعية)
             if (shorter.length >= 2 && longer.length >= 2) {
                 let shorterFirst = shorter[0];
                 let shorterLast = shorter[shorter.length - 1];
@@ -209,45 +358,146 @@
 
         async function processFiles() {
             let ss01File = document.getElementById('ss01_file').files[0];
-            let rayatFile = document.getElementById('rayat_file').files[0];
+            let timetablesFile = document.getElementById('timetables_file').files[0];
             let sl03File = document.getElementById('sl03_file').files[0];
             
             let statusDiv = document.getElementById('status');
             let btn = document.getElementById('processBtn');
 
-            if (!ss01File || !rayatFile || !sl03File) {
+            if (!ss01File || !timetablesFile || !sl03File) {
                 statusDiv.innerHTML = "<span class='error'>نأمل رفع الملفات الثلاثة أولاً!</span>";
                 return;
             }
 
             try {
                 btn.disabled = true;
-                btn.innerText = "جاري الدمج بذكاء...";
+                btn.innerText = "جاري الدمج والمطابقة بذكاء...";
                 statusDiv.innerHTML = "";
 
                 let ss01Data = await readFileAsync(ss01File);
-                let rayatData = await readFileAsync(rayatFile);
+                let timetablesData = await readFileAsync(timetablesFile);
                 let sl03Data = await readFileAsync(sl03File);
 
+                // 1. جلب الأوقات من الجدول الظاهر بالواجهة
+                let periods = {};
+                for(let i=1; i<=10; i++){
+                    periods[i] = {
+                        startRaw: document.getElementById(`start_${i}`).value,
+                        endRaw: document.getElementById(`end_${i}`).value
+                    };
+                }
+
+                // 2. تفكيك وتهيئة ملف الجدول الخام (Timetables)
+                let rawLectures = [];
+                timetablesData.forEach(row => {
+                    let term = String(row['SchoolDBN'] || row['الفصل'] || "").trim();
+                    let courseCode = String(row['CourseCode'] || row['رمز المقرر'] || "").trim();
+                    let section = String(row['SectionID'] || row['الشعبة'] || "").trim();
+                    let courseName = String(row['Course name'] || row['المقرر'] || "").trim();
+                    let periodId = parseInt(row['PeriodID'] || row['المحاضرة']);
+                    let cycleDay = String(row['Cycle Day'] || row['اليوم'] || "").trim();
+                    let teacher = String(row['Teacher Name'] || row['المدرب'] || "").trim();
+                    let room = String(row['Room'] || row['القاعة'] || "").trim();
+                    
+                    if (!section && !courseName) return; 
+                    if (!periodId || periodId < 1 || periodId > 10) return;
+
+                    if (/^\d+$/.test(cycleDay)) {
+                        cycleDay = cycleDay.padStart(5, '0');
+                    }
+                    
+                    let days = [];
+                    if (cycleDay[0] === '1') days.push({name: 'الأحد', order: 1});
+                    if (cycleDay[1] === '1') days.push({name: 'الإثنين', order: 2});
+                    if (cycleDay[2] === '1') days.push({name: 'الثلاثاء', order: 3});
+                    if (cycleDay[3] === '1') days.push({name: 'الأربعاء', order: 4});
+                    if (cycleDay[4] === '1') days.push({name: 'الخميس', order: 5});
+                    
+                    days.forEach(d => {
+                        rawLectures.push({
+                            term, courseCode, section, courseName,
+                            periodId, dayName: d.name, dayOrder: d.order,
+                            teacher, room, startP: periodId, endP: periodId
+                        });
+                    });
+                });
+
+                // 3. ترتيب المحاضرات لدمج المتصلة منها معاً
+                rawLectures.sort((a, b) => {
+                    if (a.section !== b.section) return a.section.localeCompare(b.section);
+                    if (a.dayOrder !== b.dayOrder) return a.dayOrder - b.dayOrder;
+                    if (a.courseName !== b.courseName) return a.courseName.localeCompare(b.courseName);
+                    if (a.teacher !== b.teacher) return a.teacher.localeCompare(b.teacher);
+                    return a.startP - b.startP;
+                });
+
+                // دمج الفواصل الزمنية المتقاربة بأقل من 65 دقيقة كحصة واحدة
+                let mergedLectures = [];
+                for (let i = 0; i < rawLectures.length; i++) {
+                    let current = rawLectures[i];
+                    
+                    if (mergedLectures.length > 0) {
+                        let last = mergedLectures[mergedLectures.length - 1];
+                        
+                        if (last.section === current.section && 
+                            last.dayOrder === current.dayOrder &&
+                            last.courseName === current.courseName &&
+                            last.teacher === current.teacher) {
+                            
+                            let lastEndMins = timeToMinutes(periods[last.endP]?.endRaw);
+                            let currStartMins = timeToMinutes(periods[current.startP]?.startRaw);
+                            
+                            if (currStartMins !== undefined && lastEndMins !== undefined) {
+                                let diff = currStartMins - lastEndMins;
+                                if (diff <= 65 && diff >= 0) { // شرط الدمج
+                                    last.endP = current.endP; // تحديث النهاية
+                                    if (!last.room && current.room) last.room = current.room;
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+                    mergedLectures.push({...current});
+                }
+
+                // 4. دمج الوقت وحساب الدقيقة الإضافية للحصص الزوجية
+                let adjustEven = document.getElementById('adjustEvenPeriods').checked;
+
+                mergedLectures.forEach(lec => {
+                    let pStart = lec.startP;
+                    let pEnd = lec.endP;
+                    
+                    let tStart = periods[pStart]?.startRaw || "";
+                    let tEnd = periods[pEnd]?.endRaw || "";
+                    
+                    if (adjustEven && tStart && tEnd) {
+                        if (pStart % 2 === 0) {
+                            tStart = minutesToTime(timeToMinutes(tStart) + 1);
+                        }
+                        if (pStart === pEnd && pStart % 2 === 0) {
+                            tEnd = minutesToTime(timeToMinutes(tEnd) + 1);
+                        }
+                    }
+                    
+                    lec.timeStr = `${tStart} - ${tEnd}`;
+                });
+
+                // 5. المطابقة مع SS01 و SL03 وبناء المخرج النهائي
                 let finalData = [];
                 let sectionToCRN = {}; 
                 let usedSs01Rows = new Set(); 
 
-                rayatData.forEach(row => {
-                    if (!row['اسم المقرر'] && !row['رمز المقرر']) return;
-
-                    let rCourseName = String(row['اسم المقرر'] || "").trim();
-                    let rCourseCode = String(row['رمز المقرر'] || "").trim();
-                    let rTrainer = String(row['اسم المدرب'] || "").trim();
-                    let rSection = String(row['الشعبة'] || "").trim();
+                mergedLectures.forEach(row => {
+                    let rCourseName = row.courseName;
+                    let rCourseCode = row.courseCode;
+                    let rTrainer = row.teacher;
+                    let rSection = row.section;
                     
                     let isPrac = isPractical(rCourseName, rCourseCode);
                     let lectureType = isPrac ? 'عملي' : 'نظري';
                     let rBase = extractCourseBase(rCourseCode) || extractCourseBase(rCourseName);
 
-                    // ============================================
-                    // 1. البحث عن رقم المدرب بذكاء من ملف SL03
-                    // ============================================
+                    // البحث عن رقم المدرب بذكاء من ملف SL03
                     let fetchedTrainerId = "";
                     if (rTrainer) {
                         let matchedSl03 = sl03Data.find(slRow => {
@@ -255,24 +505,18 @@
                             return isNameMatch(rTrainer, slTrainerName);
                         });
                         if (matchedSl03) {
-                            // التعديل هنا: البحث عن عمود 'رقم الحاسب' كما هو في صورتك المرفقة
                             fetchedTrainerId = matchedSl03['رقم الحاسب'] || matchedSl03['رقم المدرب'] || matchedSl03['رقم الموظف'] || matchedSl03['الرقم الوظيفي'] || "";
                         }
                     }
 
-                    // ============================================
-                    // 2. البحث عن الرقم المرجعي من ملف ss01
-                    // ============================================
+                    // البحث عن الرقم المرجعي (CRN) من ملف SS01
                     let groupKey = rBase + "|" + lectureType + "|" + rSection;
                     let matchedSs01Row = null;
 
                     if (sectionToCRN[groupKey] !== undefined) {
                         matchedSs01Row = ss01Data[sectionToCRN[groupKey]];
                     } else {
-                        let bestMatchIndex = -1;
-                        
-                        // محاولة البحث بالاسم الذكي أولاً
-                        bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
+                        let bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
                             if (usedSs01Rows.has(idx)) return false; 
                             
                             let sTrainer = String(sRow['اسم المدرب'] || sRow['المدرب'] || "").trim();
@@ -280,23 +524,18 @@
                             let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
                             
                             if (sBase !== rBase) return false;
-                            
                             let typeMatch = (!sType) || (isPrac && sType.includes('عملي')) || (!isPrac && sType.includes('نظري'));
                             if (!typeMatch) return false;
-
-                            return isNameMatch(sTrainer, rTrainer); // استخدام الذكاء هنا أيضاً
+                            return isNameMatch(sTrainer, rTrainer);
                         });
 
-                        // إذا كان اسم المدرب فارغاً في ss01 نبحث بدون مدرب
+                        // إذا كان المدرب غير موجود، نبحث بدونه
                         if (bestMatchIndex === -1) {
                             bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
                                 if (usedSs01Rows.has(idx)) return false;
-                                
                                 let sType = String(sRow['نوع الجدولة'] || sRow['نوع الشعبة'] || "").trim();
                                 let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
-                                
                                 if (sBase !== rBase) return false;
-                                
                                 let typeMatch = (!sType) || (isPrac && sType.includes('عملي')) || (!isPrac && sType.includes('نظري'));
                                 return typeMatch;
                             });
@@ -311,16 +550,15 @@
 
                     let fetchedCRN = matchedSs01Row ? (matchedSs01Row['الرقم المرجعي'] || matchedSs01Row['CRN'] || "") : "";
 
-                    // ============================================
-                    // 3. تكوين الصف النهائي
-                    // ============================================
+                    let bld = row.room ? row.room.substring(0, 5) : "";
+
                     finalData.push({
-                        "الفصل التدريبي": row['الفصل التدريبي'] || "",
+                        "الفصل التدريبي": row.term,
                         "الرقم المرجعي": fetchedCRN,
-                        "اليوم": row['اليوم'] || "",
-                        "الوقت": row['الوقت'] || "",
-                        "المبنى": row['المبنى'] || "",
-                        "القاعة": row['القاعة'] || "",
+                        "اليوم": row.dayName,
+                        "الوقت": row.timeStr,
+                        "المبنى": bld,
+                        "القاعة": row.room,
                         "رقم المدرب": fetchedTrainerId,
                         "اسم المدرب": rTrainer,
                         "اسم المقرر": rCourseName,
@@ -329,67 +567,58 @@
                         "نوع المحاضرة": lectureType
                     });
                 });
-// إنشاء ملف Excel باستخدام ExcelJS
-const workbook = new ExcelJS.Workbook();
-const worksheet = workbook.addWorksheet("الجدول النهائي", {
-    views: [{ rightToLeft: true }]
-});
 
-// الأعمدة
-worksheet.columns = [
-    { header: "الفصل التدريبي", key: "الفصل التدريبي" },
-    { header: "الرقم المرجعي", key: "الرقم المرجعي" },
-    { header: "اليوم", key: "اليوم" },
-    { header: "الوقت", key: "الوقت" },
-    { header: "المبنى", key: "المبنى" },
-    { header: "القاعة", key: "القاعة" },
-    { header: "رقم المدرب", key: "رقم المدرب" },
-    { header: "اسم المدرب", key: "اسم المدرب" },
-    { header: "اسم المقرر", key: "اسم المقرر" },
-    { header: "رمز المقرر", key: "رمز المقرر" },
-    { header: "الشعبة", key: "الشعبة" },
-    { header: "نوع المحاضرة", key: "نوع المحاضرة" }
-];
+                // إنشاء ملف Excel التلقائي 
+                const workbook = new ExcelJS.Workbook();
+                const worksheet = workbook.addWorksheet("الجدول النهائي", {
+                    views: [{ rightToLeft: true }]
+                });
 
-// إضافة البيانات
-finalData.forEach(row => worksheet.addRow(row));
+                worksheet.columns = [
+                    { header: "الفصل التدريبي", key: "الفصل التدريبي" },
+                    { header: "الرقم المرجعي", key: "الرقم المرجعي" },
+                    { header: "اليوم", key: "اليوم" },
+                    { header: "الوقت", key: "الوقت" },
+                    { header: "المبنى", key: "المبنى" },
+                    { header: "القاعة", key: "القاعة" },
+                    { header: "رقم المدرب", key: "رقم المدرب" },
+                    { header: "اسم المدرب", key: "اسم المدرب" },
+                    { header: "اسم المقرر", key: "اسم المقرر" },
+                    { header: "رمز المقرر", key: "رمز المقرر" },
+                    { header: "الشعبة", key: "الشعبة" },
+                    { header: "نوع المحاضرة", key: "نوع المحاضرة" }
+                ];
 
-// جعل عرض الأعمدة تلقائياً
-worksheet.columns.forEach(column => {
-    let maxLength = column.header.length;
+                finalData.forEach(row => worksheet.addRow(row));
 
-    column.eachCell({ includeEmpty: true }, cell => {
-        const len = cell.value ? cell.value.toString().length : 0;
-        if (len > maxLength) maxLength = len;
-    });
+                worksheet.columns.forEach(column => {
+                    let maxLength = column.header.length;
+                    column.eachCell({ includeEmpty: true }, cell => {
+                        const len = cell.value ? cell.value.toString().length : 0;
+                        if (len > maxLength) maxLength = len;
+                    });
+                    column.width = maxLength + 3;
+                });
 
-    column.width = maxLength + 3;
-});
+                const buffer = await workbook.xlsx.writeBuffer();
+                const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 
-// حفظ الملف
-const buffer = await workbook.xlsx.writeBuffer();
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = "RayatAuto_New.xlsx";
+                link.click();
+                URL.revokeObjectURL(link.href);
 
-const blob = new Blob(
-    [buffer],
-    {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    }
-);
-
-const link = document.createElement("a");
-link.href = URL.createObjectURL(blob);
-link.download = "RayatAuto_New.xlsx";
-link.click();
-URL.revokeObjectURL(link.href);
                 statusDiv.innerHTML =
-                `<span class="success">تم دمج البيانات بنجاح!</span><br>
-                 <span>عدد الصفوف: ${finalData.length}</span>`;
+                `<span class="success">تمت معالجة الجدول واستخراجه بنجاح!</span><br>
+                 <span>عدد الصفوف النهائية: ${finalData.length}</span>`;
+
             } catch (error) {
                 console.error(error);
                 statusDiv.innerHTML = "<span class='error'>حدث خطأ أثناء المعالجة: " + error.message + "</span>";
             } finally {
                 btn.disabled = false;
-                btn.innerText = "معالجة واستخراج الملف النهائي";
+                btn.innerText = "معالجة واستخراج الجدول النهائي";
             }
         }
     </script>
