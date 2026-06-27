@@ -700,7 +700,9 @@ function isPractical(courseName, courseCode) {
                             fetchedTrainerId = matchedSl03['رقم الحاسب'] || matchedSl03['رقم المدرب'] || matchedSl03['رقم الموظف'] || matchedSl03['الرقم الوظيفي'] || "";
                         }
                     }
-
+if (fetchedTrainerId) {
+                        fetchedTrainerId = String(fetchedTrainerId).trim().padStart(7, '0');
+                    }
                     let groupKey = rBase + "|" + lectureType + "|" + rSection;
                     let matchedSs01Row = null;
 
