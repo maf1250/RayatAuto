@@ -536,13 +536,13 @@
             return false;
         }
 
-        function isPractical(courseName, courseCode) {
-            let name = String(courseName || "").trim();
-            let code = String(courseCode || "").trim();
-            if (name.endsWith(' ع') || name.endsWith('(ع)') || name.includes('عملي')) return true;
-            if (code.includes('(ع)') || code.endsWith(' ع') || code.includes('عملي')) return true;
-            return false;
-        }
+function isPractical(courseName, courseCode) {
+    let name = String(courseName || "").trim();
+    let code = String(courseCode || "").trim();
+    if (name.includes('(ع)') || name.includes('عملي') || name.endsWith(' ع')) return true;
+    if (code.includes('(ع)') || code.includes('عملي') || code.endsWith(' ع') || code.includes(' ع ')) return true;
+    return false;
+}
 
         function extractCourseBase(str) {
             if (!str) return "";
