@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>أداة دمج جداول المحاضرات</title>
+    <!-- استدعاء خط كايرو من جوجل -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- استدعاء مكتبة SheetJS للتعامل مع ملفات الإكسل -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            max-width: 600px;
+            width: 100%;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            font-size: 24px;
+            margin-bottom: 30px;
+        }
+        .upload-group {
+            margin-bottom: 25px;
+            background: #f8f9fa;
+            border: 2px dashed #ced4da;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .upload-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #495057;
+        }
+        input[type="file"] {
+            display: block;
+            width: 100%;
+            font-family: inherit;
+        }
+        .btn-process {
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            padding: 15px 20px;
+            width: 100%;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+            font-family: 'Cairo', sans-serif;
+        }
+        .btn-process:hover {
+            background-color: #218838;
+        }
+        .btn-process:disabled {
+            background-color: #a5d8b2;
+            cursor: not-allowed;
+        }
+        #status {
+            text-align: center;
+            margin-top: 15px;
+            font-weight: 600;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>أداة دمج جداول المحاضرات (RayatAuto & SS01)</h1>
+        
+        <div class="upload-group">
+            <label for="ss01_file">1. ارفع تقرير (ss01) 📄</label>
+            <input type="file" id="ss01_file" accept=".xlsx, .xls">
+        </div>
+
+        <div class="upload-group">
+            <label for="rayat_file">2. ارفع ملف (RayatAuto) 📄</label>
+            <input type="file" id="rayat_file" accept=".xlsx, .xls">
+        </div>
+
+        <button class="btn-process" id="processBtn" onclick="processFiles()">معالجة واستخراج الملف الجديد</button>
+        
+        <div id="status"></div>
+    </div>
+
+    <script>
+        // دالة لقراءة الملف وتحويله إلى JSON
+        function readFileAsync(file) {
+            return new Promise((resolve, reject) => {
+                let reader = new FileReader();
+                reader.onload = function(e) {
+                    let data = new Uint8Array(e.target.result);
+                    let workbook = XLSX.read(data, {type: 'array'});
+                    let firstSheetName = workbook.SheetNames[0];
+                    let worksheet = workbook.Sheets[firstSheetName];
+                    // إرجاع البيانات كمصفوفة كائنات
+                    let json = XLSX.utils.sheet_to_json(worksheet, {defval: ""});
+                    resolve(json);
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // دالة لتحديد ما إذا كان المقرر عملي
+        function isPractical(courseName, courseCode) {
+            let name = String(courseName || "").trim();
+            let code = String(courseCode || "").trim();
+            if (name.endsWith(' ع') || name.endsWith('(ع)') || name.includes('عملي')) return true;
+            if (code.includes('(ع)') || code.endsWith(' ع')) return true;
+            return false;
+        }
+
+        // دالة لاستخراج الحروف والأرقام فقط لتوحيد صيغة رمز المقرر (تتجاهل الفواصل والأقواس)
+        function extractCourseBase(str) {
+            if (!str) return "";
+            // إزالة الكلمات الدلالية للعملي
+            let cleaned = str.replace(/\(ع\)/g, '').replace(/ ع /g, ' ').replace(/عملي/g, '').replace(/نظري/g, '');
+            // استخراج الحروف (عربي/انجليزي)
+            let lettersMatch = cleaned.match(/[a-zA-Zأ-ي]+/g);
+            let letters = lettersMatch ? lettersMatch.join('') : '';
+            // استخراج الأرقام
+            let numbersMatch = cleaned.match(/\d+/g);
+            let numbers = numbersMatch ? numbersMatch.join('') : '';
+            return letters + numbers; 
+        }
+
+        async function processFiles() {
+            let ss01File = document.getElementById('ss01_file').files[0];
+            let rayatFile = document.getElementById('rayat_file').files[0];
+            let statusDiv = document.getElementById('status');
+            let btn = document.getElementById('processBtn');
+
+            if (!ss01File || !rayatFile) {
+                statusDiv.innerHTML = "<span class='error'>الرجاء رفع كلا الملفين أولاً!</span>";
+                return;
+            }
+
+            try {
+                btn.disabled = true;
+                btn.innerText = "جاري المعالجة...";
+                statusDiv.innerHTML = "";
+
+                // قراءة الملفين
+                let ss01Data = await readFileAsync(ss01File);
+                let rayatData = await readFileAsync(rayatFile);
+
+                let finalData = [];
+
+                // معالجة بيانات RayatAuto صفا بصف
+                rayatData.forEach(row => {
+                    let rCourseName = row['اسم المقرر'];
+                    let rCourseCode = row['رمز المقرر'];
+                    let rTrainer = String(row['اسم المدرب'] || "").trim();
+                    
+                    let isPrac = isPractical(rCourseName, rCourseCode);
+                    let lectureType = isPrac ? 'عملي' : 'نظري';
+                    
+                    let rBase = extractCourseBase(rCourseCode) || extractCourseBase(rCourseName);
+
+                    // البحث في ملف ss01 عن تطابق
+                    let matchedRow = ss01Data.find(sRow => {
+                        let sTrainer = String(sRow['اسم المدرب'] || sRow['المدرب'] || "").trim();
+                        let sType = String(sRow['نوع الجدولة'] || sRow['نوع الشعبة'] || "").trim();
+                        let sBase = extractCourseBase(sRow['رمز المقرر']) || extractCourseBase(sRow['اسم المقرر'] || sRow['المقرر']);
+                        
+                        // شرط تطابق اسم المدرب (تطابق جزئي أو كلي لتفادي مشاكل المسافات)
+                        let trainerMatch = (sTrainer === rTrainer) || (sTrainer && rTrainer && (sTrainer.includes(rTrainer) || rTrainer.includes(sTrainer)));
+                        
+                        // شرط تطابق رمز المقرر الأساسي (مثلا "حاسب121" == "حاسب121")
+                        let codeMatch = (sBase === rBase);
+                        
+                        // شرط تطابق النوع (عملي مع عملي، نظري مع نظري)
+                        let typeMatch = false;
+                        if (isPrac && sType.includes('عملي')) typeMatch = true;
+                        if (!isPrac && sType.includes('نظري')) typeMatch = true;
+                        // إذا كان عمود الجدولة فارغ في التقرير نعتبره متطابق لتفادي فقدان البيانات
+                        if (!sType) typeMatch = true;
+
+                        return trainerMatch && codeMatch && typeMatch;
+                    });
+
+                    // جلب الرقم المرجعي ورقم المدرب من ss01 إن وجد
+                    let fetchedCRN = matchedRow ? (matchedRow['الرقم المرجعي'] || matchedRow['CRN'] || "") : "";
+                    let fetchedTrainerId = matchedRow ? (matchedRow['رقم المدرب'] || matchedRow['رقم الموظف'] || "") : "";
+
+                    // تكوين الصف النهائي بالترتيب المطلوب
+                    finalData.push({
+                        "الفصل التدريبي": row['الفصل التدريبي'] || "",
+                        "الرقم المرجعي": fetchedCRN || row['الرقم المرجعي'] || "",
+                        "اليوم": row['اليوم'] || "",
+                        "الوقت": row['الوقت'] || "",
+                        "المبنى": row['المبنى'] || "",
+                        "القاعة": row['القاعة'] || "",
+                        "رقم المدرب": fetchedTrainerId || row['رقم المدرب'] || "",
+                        "اسم المدرب": row['اسم المدرب'] || "",
+                        "اسم المقرر": row['اسم المقرر'] || "",
+                        "رمز المقرر": row['رمز المقرر'] || "",
+                        "الشعبة": row['الشعبة'] || "",
+                        "نوع المحاضرة": lectureType
+                    });
+                });
+
+                // تحويل البيانات الجديدة إلى شيت إكسل
+                let newSheet = XLSX.utils.json_to_sheet(finalData);
+                let newWorkbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(newWorkbook, newSheet, "الجدول النهائي");
+
+                // تحميل الملف
+                XLSX.writeFile(newWorkbook, "Final_Schedule_Merged.xlsx");
+
+                statusDiv.innerHTML = "<span class='success'>✅ تم دمج البيانات وتحميل الملف بنجاح!</span>";
+
+            } catch (error) {
+                console.error(error);
+                statusDiv.innerHTML = "<span class='error'>حدث خطأ أثناء المعالجة: " + error.message + "</span>";
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "معالجة واستخراج الملف الجديد";
+            }
+        }
+    </script>
+</body>
+</html>
