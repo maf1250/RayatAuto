@@ -134,6 +134,7 @@
             text-align: center;
             background: #fff;
             margin-bottom: 10px;
+            font-family: inherit;
         }
         .times-table th, .times-table td { border: 1px solid #ccc; padding: 6px; font-size: 13px; }
         .times-table th { background: #cbe6e3; color: #006d60; }
@@ -142,11 +143,10 @@
             border: 1px solid #ddd;
             border-radius: 4px;
             text-align: center;
-         <!--   font-family: inherit; -->
+            font-family: inherit;
             width: 90%;
             background: transparent;
             font-size: 14px;
-         <!--   font-weight: 600; -->
             padding: 4px;
         }
         .times-table input[type="number"] { width: 60px; }
@@ -247,15 +247,15 @@
             <h2 class="step-title"><i data-lucide="folder-open"></i> الخطوة 1: رفع الملفات الأساسية</h2>
             <div class="upload-group">
                 <label for="ss01_file"><i data-lucide="file-spreadsheet"></i> 1. تقرير جداول الوحدة التدريبية طولي (SS01)</label>
-                <input type="file" id="ss01_file" accept=".csv, .xlsx, .xls">
+                <input type="file" id="ss01_file" accept=".csv">
             </div>
             <div class="upload-group">
                 <label for="sl03_file"><i data-lucide="graduation-cap"></i> 2. تقرير أعضاء هيئة التدريب (SL03)</label>
-                <input type="file" id="sl03_file" accept=".csv, .xlsx, .xls">
+                <input type="file" id="sl03_file" accept=".csv">
             </div>
             <div class="upload-group">
                 <label for="timetables_file"><i data-lucide="calendar-days"></i> 3. ملف الجدول المستخرج من (aSc Timetables)</label>
-                <input type="file" id="timetables_file" accept=".csv, .xlsx, .xml, .xls">
+                <input type="file" id="timetables_file" accept=".xml">
             </div>
             <button class="btn-process" onclick="goToStep2()">التالي: إعداد أوقات المحاضرات <i data-lucide="arrow-left"></i></button>
             <div id="step1-status" class="status-msg"></div>
