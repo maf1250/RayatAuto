@@ -140,15 +140,15 @@
         .times-table th, .times-table td { border: 1px solid #ccc; padding: 6px; font-size: 13px; }
         .times-table th { background: #cbe6e3; color: #006d60; }
         
-        /* -------------- PATCH: إجبار الأرقام الإنجليزية -------------- */
         input[type="time"],
         input[type="number"],
         .times-table td strong {
-            font-family: Arial, Helvetica, sans-serif !important;
-            direction: ltr !important;
+            font-family: Arial, Helvetica, sans-serif;
+            direction: ltr;
             text-align: center;
+            unicode-bidi: plaintext;
+            font-variant-numeric: lining-nums;
         }
-        /* ------------------------------------------------------------- */
 
         .times-table input[type="time"],
         .times-table input[type="number"] {
