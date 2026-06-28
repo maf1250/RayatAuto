@@ -166,7 +166,7 @@
             font-weight: 600;
             color: #006d60;
             margin-top: 3px;
-            direction: ltr;
+
         }
         
         .btn-process {
@@ -379,7 +379,7 @@
             if (isNaN(m)) m = 0;
             let mark = (h < 12) ? 'ص' : 'م';
             let h12 = h % 12; if (h12 === 0) h12 = 12;
-            return ` ${mark}${String(h12).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+            return `${String(h12).padStart(2,'0')}:${String(m).padStart(2,'0')${mark}}`;
         }
 
         function generateTimes() {
