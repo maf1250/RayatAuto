@@ -3,10 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>أداة دمج جداول المحاضرات الذكية - TVTC</title>
+    <title>أداة دمج جداول المحاضرات الذكية</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <!-- مكتبات معالجة الإكسيل -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
         body {
@@ -61,6 +64,10 @@
             font-size: 18px;
             margin-bottom: 20px;
             font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
         
         /* نظام الصفحات */
@@ -82,14 +89,16 @@
             border: 2px dashed #8dc63f; /* الأخضر الليموني الخاص بالمؤسسة */
             padding: 15px;
             border-radius: 8px;
-            text-align: center;
+            text-align: right;
         }
         .upload-group label {
-            display: block;
+            display: flex;
+            align-items: center;
             font-weight: 600;
             margin-bottom: 10px;
             color: #008e7e;
             font-size: 16px;
+            gap: 8px;
         }
         input[type="file"] {
             display: block;
@@ -217,6 +226,10 @@
             transition: 0.3s;
             font-family: 'Cairo', sans-serif;
             flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
         .btn-process:hover { background-color: #006d60; }
         .btn-process:disabled { background-color: #99c7c2; cursor: not-allowed; }
@@ -231,7 +244,9 @@
             padding: 8px 15px; 
             margin-bottom:15px; 
             font-size:13px; 
-            display: block; 
+            display: flex; 
+            align-items: center;
+            gap: 6px;
             margin: 0 auto 15px;
             font-family: inherit;
             border: none;
@@ -249,62 +264,89 @@
         }
         .success { color: #008e7e; }
         .error { color: #dc3545; }
+
+        /* ---------- تنسيقات أيقونات Lucide ---------- */
+        .lucide {
+            width: 20px;
+            height: 20px;
+            vertical-align: middle;
+            stroke-width: 2.5;
+        }
+        
+        .step-title .lucide {
+            width: 24px;
+            height: 24px;
+            color: #008e7e;
+        }
+        
+        /* كلاس الأنيميشن لأيقونة التحميل */
+        .lucide-spin {
+            animation: spin 1.5s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
 
     <div class="container">
  
-<a href="https://youtu.be/CaZTUCzXPnY" target="_blank" class="youtube-btn" title="لمشاهدة الشرح">
-    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="white">
-        <path d="M23.5 6.2c-.3-1.2-1.2-2.1-2.4-2.4C19 3.2 12 3.2 12 3.2s-7 0-9.1.6C1.7 4.1.8 5 .5 6.2 0 8.3 0 12 0 12s0 3.7.5 5.8c.3 1.2 1.2 2.1 2.4 2.4C5 20.8 12 20.8 12 20.8s7 0 9.1-.6c1.2-.3 2.1-1.2 2.4-2.4.5-2.1.5-5.8.5-5.8s0-3.7-.5-5.8zM9.6 15.5V8.5L15.8 12l-6.2 3.5z"/>
-    </svg>
-</a>
+        <a href="https://youtu.be/CaZTUCzXPnY" target="_blank" class="youtube-btn" title="لمشاهدة الشرح">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="white">
+                <path d="M23.5 6.2c-.3-1.2-1.2-2.1-2.4-2.4C19 3.2 12 3.2 12 3.2s-7 0-9.1.6C1.7 4.1.8 5 .5 6.2 0 8.3 0 12 0 12s0 3.7.5 5.8c.3 1.2 1.2 2.1 2.4 2.4C5 20.8 12 20.8 12 20.8s7 0 9.1-.6c1.2-.3 2.1-1.2 2.4-2.4.5-2.1.5-5.8.5-5.8s0-3.7-.5-5.8zM9.6 15.5V8.5L15.8 12l-6.2 3.5z"/>
+            </svg>
+        </a>
 
-<h1>أداة دمج جداول المحاضرات</h1> 
+        <h1>أداة دمج جداول المحاضرات</h1> 
+        
         <!-- الخطوة 1: رفع الملفات -->
         <div id="step1" class="step active">
-            <h2 class="step-title">الخطوة 1: رفع الملفات الأساسية 📁</h2>
+            <h2 class="step-title"><i data-lucide="folder-open"></i> الخطوة 1: رفع الملفات الأساسية</h2>
             
             <div class="upload-group">
-                <label for="ss01_file">1. تقرير جداول الوحدة التدريبية طولي (SS01) 📖</label>
+                <label for="ss01_file"><i data-lucide="file-spreadsheet"></i> 1. تقرير جداول الوحدة التدريبية طولي (SS01)</label>
                 <input type="file" id="ss01_file" accept=".csv, .xlsx, .xls">
             </div>
             <div class="upload-group">
-                <label for="sl03_file">2. تقرير أعضاء هيئة التدريب (SL03) 👨‍🏫</label>
+                <label for="sl03_file"><i data-lucide="graduation-cap"></i> 2. تقرير أعضاء هيئة التدريب (SL03)</label>
                 <input type="file" id="sl03_file" accept=".csv, .xlsx, .xls">
             </div>
             <div class="upload-group">
-                <label for="timetables_file">3. ملف الجدول المستخرج من (aSc Timetables) 📅</label>
+                <label for="timetables_file"><i data-lucide="calendar-days"></i> 3. ملف الجدول المستخرج من (aSc Timetables)</label>
                 <input type="file" id="timetables_file" accept=".csv, .xlsx, .xml, .xls">
             </div>
 
-            <button class="btn-process" onclick="goToStep2()">التالي: إعداد أوقات المحاضرات</button>
+            <button class="btn-process" onclick="goToStep2()">
+                التالي: إعداد أوقات المحاضرات <i data-lucide="arrow-left"></i>
+            </button>
             <div id="step1-status" class="status-msg"></div>
         </div>
 
         <!-- الخطوة 2: إعداد الأوقات والمعالجة -->
         <div id="step2" class="step">
-            <h2 class="step-title">الخطوة 2: إعداد أوقات المحاضرات 🕒</h2>
+            <h2 class="step-title"><i data-lucide="clock"></i> الخطوة 2: إعداد أوقات المحاضرات</h2>
             
             <div class="settings-group">
                 <h3>الإعدادات الافتراضية (لتعبئة الجدول سريعاً)</h3>
                 <div class="settings-row">
                     <div>
-                        <label>وقت بدء المحاضرة الأولى:</label>
+                        <label>وقت بدء الأولى:</label>
                         <input type="time" id="startTime" value="08:00" onchange="generateTimes()">
                     </div>
                     <div>
-                        <label>مدة المحاضرة (بالدقائق):</label>
+                        <label>مدة المحاضرة (دقيقة):</label>
                         <input type="number" id="duration" value="50" min="50" onchange="generateTimes()">
                     </div>
                     <div>
-                        <label>الاستراحة (بعد 2 ، 4 ، 6 الخ):</label>
+                        <label>الاستراحة (بعد 2 ، 4 ، 6):</label>
                         <input type="number" id="defaultBreakTime" value="5" min="0" onchange="generateTimes()">
                     </div>
                 </div>
                 
-                <button class="btn-reset" onclick="generateTimes()">إعادة ضبط الجدول بناءً على الافتراضي</button>
+                <button class="btn-reset" onclick="generateTimes()">
+                    <i data-lucide="rotate-ccw"></i>إعادة ضبط الجدول</button>
 
                 <table class="times-table">
                     <thead>
@@ -312,7 +354,7 @@
                             <th>المحاضرة</th>
                             <th>وقت البدء</th>
                             <th>وقت الانتهاء</th>
-                            <th>الاستراحة بعدها (بالدقائق)</th>
+                            <th>الاستراحة بعدها</th>
                         </tr>
                     </thead>
                     <tbody id="timesBody">
@@ -331,8 +373,12 @@
             </div>
 
             <div class="btn-group">
-                <button class="btn-process btn-secondary" onclick="goToStep1()">السابق</button>
-                <button class="btn-process" id="processBtn" onclick="processFiles()">استخراج الجدول النهائي 🚀</button>
+                <button class="btn-process btn-secondary" onclick="goToStep1()">
+                    <i data-lucide="arrow-right"></i> السابق
+                </button>
+                <button class="btn-process" id="processBtn" onclick="processFiles()">
+                    <i data-lucide="rocket"></i> استخراج الجدول النهائي
+                </button>
             </div>
             
             <div id="status" class="status-msg"></div>
@@ -340,6 +386,9 @@
     </div>
 
     <script>
+        // تفعيل أيقونات Lucide عند تحميل الصفحة
+        lucide.createIcons();
+
         // مصفوفة لتخزين أوقات المحاضرات والاستراحات المخصصة لكل محاضرة
         let timesData = [];
 
@@ -581,7 +630,10 @@
 
             try {
                 btn.disabled = true;
-                btn.innerText = "جارٍ المعالجة واستخراج الجدول ⚙️...";
+                // تغيير محتوى الزر ليعرض أيقونة التحميل الدوارة
+                btn.innerHTML = `<i data-lucide="loader-2" class="lucide-spin"></i> جارٍ المعالجة واستخراج الجدول...`;
+                lucide.createIcons(); // تفعيل الأيقونة الجديدة فوراً
+                
                 statusDiv.innerHTML = "";
 
                 let ss01Data = await readFileAsync(ss01File);
@@ -825,7 +877,9 @@
                 statusDiv.innerHTML = "<span class='error'>حدث خطأ أثناء المعالجة: " + error.message + "</span>";
             } finally {
                 btn.disabled = false;
-                btn.innerText = "استخراج الجدول النهائي 🚀";
+                // إعادة الزر لشكله الطبيعي بعد الانتهاء
+                btn.innerHTML = `<i data-lucide="rocket"></i> استخراج الجدول النهائي`;
+                lucide.createIcons();
             }
         }
     </script>
