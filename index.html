@@ -839,6 +839,42 @@
                     });
                 });
 
+                // --- فحص الخانات الفارغة في الأعمدة المحددة عبر نافذة منبثقة ---
+                let missingDataCount = 0;
+                let missingColumnsSet = new Set(); 
+                
+                const columnsToCheck = [
+                    "الفصل التدريبي", "الرقم المرجعي", "اليوم", 
+                    "الوقت", "المبنى", "القاعة", "رقم المدرب"
+                ];
+
+                finalData.forEach(row => {
+                    let hasMissing = false;
+                    columnsToCheck.forEach(col => {
+                        // إذا كانت القيمة غير موجودة أو فارغة
+                        if (row[col] === undefined || row[col] === null || String(row[col]).trim() === "") {
+                            hasMissing = true;
+                            missingColumnsSet.add(col);
+                        }
+                    });
+                    if (hasMissing) missingDataCount++;
+                });
+
+                if (missingDataCount > 0) {
+                    let missingColsArray = Array.from(missingColumnsSet).join(" ، ");
+                    let confirmMsg = `⚠️ تنبيه هام:\n\nيوجد (${missingDataCount}) صفوف في الجدول النهائي تحتوي على خلايا فارغة!\n\nالنقص متركز في الأعمدة التالية:\n[ ${missingColsArray} ]\n\nهل تريد الاستمرار واستخراج ملف الإكسل على أية حال؟`;
+                    
+                    if (!confirm(confirmMsg)) {
+                        statusDiv.innerHTML = `<div style="background-color: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; border: 1px solid #ffeeba; font-weight: 600;">
+                            <i data-lucide="x-circle" style="color: #dc3545;"></i> تم إيقاف استخراج الجدول لمراجعة النواقص في الملفات.
+                        </div>`;
+                        btn.disabled = false;
+                        btn.innerHTML = `<i data-lucide="rocket"></i> استخراج الجدول النهائي`;
+                        lucide.createIcons();
+                        return; // إيقاف إكمال العملية نهائياً
+                    }
+                }
+                // --------------------------------------------------------
                 // إنشاء ملف Excel التلقائي 
                 const workbook = new ExcelJS.Workbook();
                 const worksheet = workbook.addWorksheet("الجدول النهائي", {
