@@ -569,39 +569,51 @@
             });
         }
 
-        // دالة تنظيف وتوحيد الأسماء العربية
+// دالة تنظيف وتوحيد الأسماء العربية
         function normalizeArabicName(name) {
             if (!name) return "";
             return name.replace(/[أإآ]/g, 'ا')
                        .replace(/ة/g, 'ه')
                        .replace(/ى/g, 'ي')
-                       .replace(/ عبد /g, ' عبد')
+                       .replace(/عبد\s+/g, 'عبد') // توحيد (عبد العزيز) لتصبح (عبدالعزيز) لمنع التشتت
+                       .replace(/\s+/g, ' ') // إزالة المسافات المكررة
                        .trim();
         }
 
+        // دالة المطابقة الذكية للأسماء (تم تحديثها لمنع التداخل بين الأسماء المتشابهة)
         function isNameMatch(name1, name2) {
             if (!name1 || !name2) return false;
+            
             let n1 = normalizeArabicName(name1);
             let n2 = normalizeArabicName(name2);
-            if (n1 === n2) return true;
+            
+            if (n1 === n2) return true; // تطابق تام بعد التنظيف
 
-            let parts1 = n1.split(/\s+/);
-            let parts2 = n2.split(/\s+/);
+            let parts1 = n1.split(' ');
+            let parts2 = n2.split(' ');
+
+            // تحديد الاسم الأقصر والاسم الأطول
             let [shorter, longer] = parts1.length < parts2.length ? [parts1, parts2] : [parts2, parts1];
 
-            let allPartsMatch = shorter.every(part => longer.includes(part));
-            if (allPartsMatch && shorter.length >= 2) return true;
+            // 1. يجب أن يتطابق الاسم الأول
+            if (shorter[0] !== longer[0]) return false;
 
-            if (shorter.length >= 2 && longer.length >= 2) {
-                let shorterFirst = shorter[0];
-                let shorterLast = shorter[shorter.length - 1];
-                let longerFirst = longer[0];
-                let longerLast = longer[longer.length - 1];
-                if (shorterFirst === longerFirst && shorterLast === longerLast) return true;
+            // 2. يجب أن يتطابق الاسم الأخير
+            if (shorter[shorter.length - 1] !== longer[longer.length - 1]) return false;
+
+            // 3. التحقق من الأسماء الوسطى (الجزء الأهم لحل مشكلة تشابه الأسماء)
+            // إذا كان الاسم الأقصر يحتوي على اسم أوسط، فيجب أن يكون موجوداً في الاسم الأطول
+            // مثال: (منصور عبدالعزيز الفايز) و (منصور محمد الفايز) سيرفضها لأن عبدالعزيز غير موجودة في الثاني
+            if (shorter.length > 2) {
+                for (let i = 1; i < shorter.length - 1; i++) {
+                    if (!longer.includes(shorter[i])) {
+                        return false; // تعارض في الاسم الأوسط
+                    }
+                }
             }
-            return false;
-        }
 
+            return true;
+        }
         function isPractical(courseName, courseCode) {
             let name = String(courseName || "").trim();
             let code = String(courseCode || "").trim();
@@ -833,6 +845,7 @@
                     views: [{ rightToLeft: true }]
                 });
 
+                // إعداد أعمدة ملف الإكسيل
                 worksheet.columns = [
                     { header: "الفصل التدريبي", key: "الفصل التدريبي" },
                     { header: "الرقم المرجعي", key: "الرقم المرجعي" },
@@ -841,6 +854,7 @@
                     { header: "المبنى", key: "المبنى" },
                     { header: "القاعة", key: "القاعة" },
                     { header: "رقم المدرب", key: "رقم المدرب" },
+                    { header: "", key: "empty_column" },
                     { header: "اسم المدرب", key: "اسم المدرب" },
                     { header: "اسم المقرر", key: "اسم المقرر" },
                     { header: "رمز المقرر", key: "رمز المقرر" },
@@ -849,16 +863,15 @@
                 ];
 
                 finalData.forEach(row => worksheet.addRow(row));
-
+                // ضبط عرض الأعمدة تلقائياً
                 worksheet.columns.forEach(column => {
-                    let maxLength = column.header.length;
+                    let maxLength = column.header ? column.header.length : 0;
                     column.eachCell({ includeEmpty: true }, cell => {
                         const len = cell.value ? cell.value.toString().length : 0;
                         if (len > maxLength) maxLength = len;
                     });
-                    column.width = maxLength + 3;
+                    column.width = maxLength === 0 ? 10 : maxLength + 3;
                 });
-
                 const buffer = await workbook.xlsx.writeBuffer();
                 const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 
@@ -868,16 +881,52 @@
                 link.click();
                 URL.revokeObjectURL(link.href);
 
-                statusDiv.innerHTML =
-                `<span class="success">تمت معالجة الجدول واستخراجه بنجاح!</span><br>
-                 <span style="color: #006d60;">عدد الصفوف النهائية: ${finalData.length}</span>`;
+// --- فحص الخانات الفارغة في الأعمدة المحددة ---
+                let missingDataCount = 0;
+                let missingColumnsSet = new Set(); // لمعرفة أي الأعمدة تحديداً بها نقص
+                
+                const columnsToCheck = [
+                    "الفصل التدريبي", "الرقم المرجعي", "اليوم", 
+                    "الوقت", "المبنى", "القاعة", "رقم المدرب"
+                ];
 
+                finalData.forEach(row => {
+                    let hasMissing = false;
+                    columnsToCheck.forEach(col => {
+                        // التحقق مما إذا كانت القيمة فارغة أو غير موجودة
+                        if (!row[col] || String(row[col]).trim() === "") {
+                            hasMissing = true;
+                            missingColumnsSet.add(col);
+                        }
+                    });
+                    if (hasMissing) missingDataCount++;
+                });
+
+                // --- عرض النتيجة النهائية للمستخدم ---
+                if (missingDataCount > 0) {
+                    let missingColsArray = Array.from(missingColumnsSet).join("، ");
+                    statusDiv.innerHTML =
+                    `<span class="success">تمت معالجة الجدول واستخراجه بنجاح!</span><br>
+                     <span style="color: #006d60; font-weight: bold;">عدد الصفوف النهائية: ${finalData.length}</span><br><br>
+                     <div style="background-color: #fff8c4; color: #856404; padding: 12px; border-radius: 8px; border: 1px solid #ffeeba; text-align: right; font-size: 14px; line-height: 1.6;">
+                        <div style="display: flex; align-items: center; gap: 8px; font-weight: bold; color: #d39e00; margin-bottom: 5px;">
+                            <i data-lucide="alert-triangle"></i> تنبيه هام:
+                        </div>
+                        يوجد <b>${missingDataCount}</b> صفوف تحتوي على خانات فارغة! <br>
+                        النقص موجود في عمود/أعمدة: <b>[ ${missingColsArray} ]</b><br>
+                        <span style="color: #666; font-size: 12px;"><i data-lucide="info" style="width: 14px; height:14px;"></i> نأمل فتح الملف، ومراجعة هذه الخانات وتعبئتها أو التأكد من سبب عدم تطابقها.</span>
+                     </div>`;
+                } else {
+                    statusDiv.innerHTML =
+                    `<span class="success" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <i data-lucide="check-circle-2"></i>تمت معالجة الجدول واستخراجه بنجاح!</span><br>
+                     <span style="color: #006d60; font-weight: bold;">عدد الصفوف النهائية: ${finalData.length}</span>`;
+                }
             } catch (error) {
                 console.error(error);
                 statusDiv.innerHTML = "<span class='error'>حدث خطأ أثناء المعالجة: " + error.message + "</span>";
             } finally {
                 btn.disabled = false;
-                // إعادة الزر لشكله الطبيعي بعد الانتهاء
                 btn.innerHTML = `<i data-lucide="rocket"></i> استخراج الجدول النهائي`;
                 lucide.createIcons();
             }
