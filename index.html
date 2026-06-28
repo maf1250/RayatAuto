@@ -215,6 +215,7 @@
                 <button class="btn-process btn-secondary" onclick="goToStep1()"><i data-lucide="arrow-right"></i> السابق</button>
                 <button class="btn-process" id="processBtn" onclick="processFiles()"><i data-lucide="rocket"></i> استخراج الجدول النهائي</button>
             </div>
+            <div id="step2-status" style="text-align: center; margin-top: 15px;"></div>
         </div>
 
         <!-- الخطوة 3: صفحة النتائج -->
@@ -335,7 +336,10 @@
 
         async function processFiles() {
             let btn = document.getElementById('processBtn');
+            let statusDiv = document.getElementById('step2-status');
+            
             try {
+                statusDiv.innerHTML = "";
                 btn.disabled = true;
                 btn.innerHTML = `<i data-lucide="loader-2" class="lucide-spin"></i> جارٍ المعالجة...`;
                 lucide.createIcons();
@@ -418,16 +422,7 @@
                     });
                 });
 
-                // تصدير الإكسيل
-                const workbook = new ExcelJS.Workbook();
-                const worksheet = workbook.addWorksheet("الجدول", { views: [{ rightToLeft: true }] });
-                worksheet.columns = Object.keys(finalData[0]).map(k => ({ header: k, key: k, width: 15 }));
-                finalData.forEach(row => worksheet.addRow(row));
-                const buffer = await workbook.xlsx.writeBuffer();
-                const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-                const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = "Rayat_Schedule.xlsx"; link.click();
-
-                // حساب النواقص للعرض في الصفحة الثالثة
+                // --- فحص الخانات الفارغة في الأعمدة المحددة وعرض النافذة المنبثقة ---
                 let missingCount = 0;
                 let missingCols = new Set();
                 finalData.forEach(r => {
@@ -437,6 +432,30 @@
                     });
                     if(hasM) missingCount++;
                 });
+
+                // ظهور رسالة التأكيد (التنبيه) في حال وجود نقص
+                if (missingCount > 0) {
+                    let missingColsArray = Array.from(missingCols).join(" ، ");
+                    let confirmMsg = `⚠️ تنبيه هام:\n\nهناك (${missingCount}) صفًا في الجدول النهائي تحتوي على خانات فارغة!\n\nالنقص موجود في الأعمدة التالية:\n[ ${missingColsArray} ]\n\nهل تريد الاستمرار واستخراج ملف الإكسل على أية حال؟`;              
+                    if (!confirm(confirmMsg)) {
+                        statusDiv.innerHTML = `<div style="background-color: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; border: 1px solid #ffeeba; font-weight: 600;">
+                            <i data-lucide="x-circle" style="color: #dc3545; vertical-align: middle;"></i> تم إيقاف استخراج الجدول. يرجى مراجعة الملفات المرفوعة.
+                        </div>`;
+                        btn.disabled = false;
+                        btn.innerHTML = `<i data-lucide="rocket"></i> استخراج الجدول النهائي`;
+                        lucide.createIcons();
+                        return; // إيقاف العملية
+                    }
+                }
+
+                // تصدير الإكسيل
+                const workbook = new ExcelJS.Workbook();
+                const worksheet = workbook.addWorksheet("الجدول", { views: [{ rightToLeft: true }] });
+                worksheet.columns = Object.keys(finalData[0]).map(k => ({ header: k, key: k, width: 15 }));
+                finalData.forEach(row => worksheet.addRow(row));
+                const buffer = await workbook.xlsx.writeBuffer();
+                const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+                const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = "Rayat_Schedule.xlsx"; link.click();
 
                 // الانتقال للصفحة الثالثة
                 document.getElementById('step2').classList.remove('active');
@@ -450,7 +469,7 @@
                 }
 
             } catch (e) {
-                alert("خطأ: " + e.message);
+                statusDiv.innerHTML = `<span style='color:red;'>خطأ: ${e.message}</span>`;
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = `<i data-lucide="rocket"></i> استخراج الجدول النهائي`;
