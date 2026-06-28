@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="format-detection" content="telephone=no">
     <title>أداة دمج جداول المحاضرات الذكية</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
     
@@ -145,16 +146,20 @@
         .times-table td strong {
             font-family: Arial, Helvetica, sans-serif;
             text-align: center;
-        }
+    direction: ltr;
+    unicode-bidi: bidi-override;
+    font-variant-numeric: lining-nums;
+}
 
         .times-table input[type="time" lang="en"],
         .times-table input[type="number" lang="en"] {
             border: 1px solid #ddd;
             border-radius: 4px;
-            width: 90%;
+            width: 40%;
             background: transparent;
-            font-size: 14px;
-            padding: 4px;
+    padding: 2px 4px;
+    font-size: 13px;
+    text-align: center;
         }
         .times-table input[type="number" lang="en"] { width: 60px; }
         
@@ -430,6 +435,10 @@
                 timesData[i].endMins = timesData[i].startMins + duration;
             }
             renderTable();
+            document.querySelectorAll('input[type="time"],input[type="number"]').forEach(el=>{
+    el.setAttribute("lang","en");
+    el.setAttribute("inputmode","numeric");
+});
         }
 
         function readFileAsync(file) {
