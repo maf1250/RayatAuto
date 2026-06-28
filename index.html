@@ -146,22 +146,26 @@
         .times-table td strong {
             font-family: Arial, Helvetica, sans-serif;
             text-align: center;
-    direction: ltr;
-    unicode-bidi: bidi-override;
-    font-variant-numeric: lining-nums;
-}
+            direction: ltr;
+            unicode-bidi: bidi-override;
+            font-variant-numeric: lining-nums;
+        }
 
         .times-table input[type="time" lang="en"],
         .times-table input[type="number" lang="en"] {
             border: 1px solid #ddd;
             border-radius: 4px;
-            width: 40%;
             background: transparent;
-    padding: 2px 4px;
-    font-size: 13px;
-    text-align: center;
+            padding: 2px 4px;
+            font-size: 13px;
+            text-align: center;
         }
-        .times-table input[type="number" lang="en"] { width: 60px; }
+        
+        /* إعطاء عرض كافي لخانة الوقت ليظهر العداد الخاص بها بوضوح */
+        .times-table input[type="time" lang="en"] { width: 115px; }
+        
+        /* تصغير عرض خانة الاستراحة */
+        .times-table input[type="number" lang="en"] { width: 45px; }
         
         .btn-process {
             background-color: #008e7e;
@@ -279,8 +283,8 @@
             <div class="settings-group">
                 <h3>الإعدادات الافتراضية (لتعبئة الجدول سريعاً)</h3>
                 <div class="settings-row">
-                    <!-- PATCH: تمت إضافة lang="en" للحقول -->
-                    <div><label>وقت بدء المحاضرة الأولى:</label><input type="time" id="startTime" value="08:00" lang="en" onchange="generateTimes()"></div>
+                    <!-- تمت إضافة خاصية العداد step="60" لخانة الوقت -->
+                    <div><label>وقت بدء المحاضرة الأولى:</label><input type="time" id="startTime" value="08:00" step="60" lang="en" onchange="generateTimes()"></div>
                     <div><label>مدة المحاضرة (دقيقة):</label><input type="number" id="duration" value="50" lang="en" onchange="generateTimes()"></div>
                     <div><label>الاستراحة (بعد 2 ، 4 ، 6 ، 8):</label><input type="number" id="defaultBreakTime" value="5" lang="en" onchange="generateTimes()"></div>
                 </div>
@@ -394,12 +398,13 @@
             tbody.innerHTML = '';
             timesData.forEach((data, index) => {
                 let breakInputHtml = index < 9 ? 
-                    `<input type="number" min="0" value="${data.breakAfter}" lang="en" onchange="updateBreak(${index}, this.value)">` : '-';
+                    `<input type="number" min="0" value="${data.breakAfter}" step="1" lang="en" onchange="updateBreak(${index}, this.value)">` : '-';
                 tbody.innerHTML += `
                     <tr>
                         <td><strong>${data.period}</strong></td>
-                        <td><input type="time" id="start_${data.period}" value="${minutesToTime(data.startMins)}" lang="en" onchange="updateStart(${index}, this.value)"></td>
-                        <td><input type="time" id="end_${data.period}" value="${minutesToTime(data.endMins)}" lang="en" onchange="updateEnd(${index}, this.value)"></td>
+                        <!-- إضافة عداد الوقت step="60" لخانة وقت البدء والانتهاء -->
+                        <td><input type="time" id="start_${data.period}" value="${minutesToTime(data.startMins)}" step="60" lang="en" onchange="updateStart(${index}, this.value)"></td>
+                        <td><input type="time" id="end_${data.period}" value="${minutesToTime(data.endMins)}" step="60" lang="en" onchange="updateEnd(${index}, this.value)"></td>
                         <td>${breakInputHtml}</td>
                     </tr>
                 `;
@@ -436,9 +441,9 @@
             }
             renderTable();
             document.querySelectorAll('input[type="time"],input[type="number"]').forEach(el=>{
-    el.setAttribute("lang","en");
-    el.setAttribute("inputmode","numeric");
-});
+                el.setAttribute("lang","en");
+                el.setAttribute("inputmode","numeric");
+            });
         }
 
         function readFileAsync(file) {
