@@ -862,8 +862,7 @@
 
                 if (missingDataCount > 0) {
                     let missingColsArray = Array.from(missingColumnsSet).join(" ، ");
-                    let confirmMsg = `⚠️ تنبيه هام:\n\nيوجد (${missingDataCount}) صفوف في الجدول النهائي تحتوي على خلايا فارغة!\n\nالنقص متركز في الأعمدة التالية:\n[ ${missingColsArray} ]\n\nهل تريد الاستمرار واستخراج ملف الإكسل على أية حال؟`;
-                    
+                    let confirmMsg = `⚠️ تنبيه هام:\n\nهناك (${missingDataCount}) صفًا في الجدول النهائي تحتوي على خلايا فارغة!\n\nالنقص متركز في الأعمدة التالية:\n[ ${missingColsArray} ]\n\nهل تريد الاستمرار واستخراج ملف الإكسل على أية حال؟`;              
                     if (!confirm(confirmMsg)) {
                         statusDiv.innerHTML = `<div style="background-color: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; border: 1px solid #ffeeba; font-weight: 600;">
                             <i data-lucide="x-circle" style="color: #dc3545;"></i> تم إيقاف استخراج الجدول لمراجعة النواقص في الملفات.
