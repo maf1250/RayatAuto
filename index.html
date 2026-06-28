@@ -137,7 +137,7 @@
             background: #fff;
             margin-bottom: 10px;
         }
-        .times-table th, .times-table td { border: 1px solid #ccc; padding: 6px; font-size: 13px;  }
+        .times-table th, .times-table td { border: 1px solid #ccc; padding: 6px; font-size: 13px; }
         .times-table th { background: #cbe6e3; color: #006d60; }
         
         .time-input,
@@ -147,27 +147,76 @@
             text-align: center;
         }
 
-        .times-table .time-input,
         .times-table input[type="number"] {
             border: 1px solid #ddd;
             border-radius: 4px;
-            width: 120px;
+            width: 60px;
             background: transparent;
             font-size: 14px;
             padding: 4px;
+        }
+
+        /* صندوق الوقت: حقل بلا حدود + حرف ص/م بجانبه ككتلة واحدة
+           (أرقام لاتينية دائماً، مستقل عن لغة النظام) */
+        .time-box {
+            display: inline-flex;
+            flex-direction: row; /* الترتيب: ص/م يسار، ثم الرقم، ثم الأسهم يميناً */
+            align-items: center;
+            gap: 5px;
+            direction: ltr;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 3px 9px;
+            background: #fff;
+        }
+        .time-box:focus-within { border-color: #008e7e; }
+        .time-box .time-input {
+            border: none;
+            outline: none;
+            background: transparent;
+            width: 50px;
+            padding: 0;
+            font-size: 14px;
             direction: ltr;
         }
-        .times-table input[type="number"] { width: 60px; }
-
-        /* عرض الوقت بصيغة 12 ساعة: أرقام لاتينية + ص/م — مستقل تماماً عن لغة النظام */
-        .time12 {
+        .time-box .ampm {
             font-family: Arial, Helvetica, sans-serif;
-            font-size: 12px;
-            font-weight: 600;
+            font-size: 13px;
+            font-weight: 700;
             color: #006d60;
-            margin-top: 3px;
-           
+            min-width: 14px;
+            text-align: center;
         }
+
+        /* داخل صف الإعدادات، .settings-row div يفرض عموداً وعرضاً 140px على أي div؛
+           نعيد ضبط صندوق الوقت ليبقى أفقياً ومتلاصقاً (الرقم يمين، ص/م يسار) */
+        .settings-row .time-box {
+            display: inline-flex;
+            flex-direction: row;
+            min-width: 0;
+            flex: 0 0 auto;
+        }
+
+        /* أسهم ▲▼ لحقول الوقت (تكّة = 5 دقائق)، تظهر يمين الصندوق */
+        .time-box .stepper {
+            display: inline-flex;
+            flex-direction: column;
+            line-height: 1;
+            margin-inline-start: 1px;
+        }
+        .time-box .stepper button {
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            padding: 0 2px;
+            font-size: 8px;
+            line-height: 9px;
+            color: #6c757d;
+        }
+        .time-box .stepper button:hover { color: #008e7e; }
+
+        /* أسهم حقول الأرقام (المدة/الاستراحة) تظهر على اليمين بدل اليسار */
+        input[type="number"] { direction: ltr; }
         
         .btn-process {
             background-color: #008e7e;
@@ -285,7 +334,7 @@
             <div class="settings-group">
                 <h3>الإعدادات الافتراضية (لتعبئة الجدول سريعاً)</h3>
                 <div class="settings-row">
-                    <div><label>وقت بدء المحاضرة الأولى:</label><input type="text" class="time-input" id="startTime" value="08:00" inputmode="numeric" pattern="[0-9]{2}:[0-9]{2}" maxlength="5" placeholder="HH:MM" onchange="generateTimes()"></div>
+                    <div><label>وقت بدء المحاضرة الأولى:</label><div class="time-box"><span class="ampm">ص</span><input type="text" class="time-input" id="startTime" value="08:00" inputmode="numeric" pattern="[0-9]{2}:[0-9]{2}" maxlength="5" placeholder="HH:MM" oninput="syncAmpm(this)" onchange="generateTimes()"><span class="stepper"><button type="button" tabindex="-1" onclick="bumpTime('startTime',5)">&#9650;</button><button type="button" tabindex="-1" onclick="bumpTime('startTime',-5)">&#9660;</button></span></div></div>
                     <div><label>مدة المحاضرة (دقيقة):</label><input type="number" id="duration" value="50" lang="en" onchange="generateTimes()"></div>
                     <div><label>الاستراحة (بعد 2 ، 4 ، 6 ، 8):</label><input type="number" id="defaultBreakTime" value="5" lang="en" onchange="generateTimes()"></div>
                 </div>
@@ -372,14 +421,28 @@
             return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
         }
 
-        // يُرجِع الوقت بصيغة 12 ساعة بأرقام لاتينية + علامة ص/م (لا يعتمد على لغة النظام)
-        function to12hAr(hhmm) {
-            let [h, m] = String(hhmm).split(':').map(Number);
+        // يُرجِع علامة الوقت (ص قبل الظهر / م بعده) — حرف عربي مستقل عن لغة النظام
+        function ampmOf(hhmm) {
+            let h = Number(String(hhmm).split(':')[0]);
             if (isNaN(h)) h = 0;
-            if (isNaN(m)) m = 0;
-            let mark = (h < 12) ? 'ص' : 'م';
-            let h12 = h % 12; if (h12 === 0) h12 = 12;
-            return `${String(h12).padStart(2,'0')}:${String(m).padStart(2,'0')} ${mark}`;
+            return (h < 12) ? 'ص' : 'م';
+        }
+
+        // تحديث حرف ص/م لصندوق الحقل المُمرَّر
+        function syncAmpm(inp) {
+            let b = inp.closest('.time-box');
+            if (b) { let a = b.querySelector('.ampm'); if (a) a.textContent = ampmOf(inp.value); }
+        }
+
+        // زيادة/إنقاص الوقت بمقدار delta دقيقة عبر الأسهم (يلتفّ عند منتصف الليل)
+        function bumpTime(id, delta) {
+            let inp = document.getElementById(id);
+            if (!inp) return;
+            let mins = timeToMinutes(inp.value) + delta;
+            mins = ((mins % 1440) + 1440) % 1440;
+            inp.value = minutesToTime(mins);
+            syncAmpm(inp);
+            inp.dispatchEvent(new Event('change')); // يُشغّل updateStart/updateEnd/generateTimes
         }
 
         function generateTimes() {
@@ -413,8 +476,8 @@
                 tbody.innerHTML += `
                     <tr>
                         <td><strong>${data.period}</strong></td>
-                        <td><input type="text" class="time-input" id="start_${data.period}" value="${minutesToTime(data.startMins)}" inputmode="numeric" pattern="[0-9]{2}:[0-9]{2}" maxlength="5" onchange="updateStart(${index}, this.value)"><div class="time12">${to12hAr(minutesToTime(data.startMins))}</div></td>
-                        <td><input type="text" class="time-input" id="end_${data.period}" value="${minutesToTime(data.endMins)}" inputmode="numeric" pattern="[0-9]{2}:[0-9]{2}" maxlength="5" onchange="updateEnd(${index}, this.value)"><div class="time12">${to12hAr(minutesToTime(data.endMins))}</div></td>
+                        <td><div class="time-box"><span class="ampm">${ampmOf(minutesToTime(data.startMins))}</span><input type="text" class="time-input" id="start_${data.period}" value="${minutesToTime(data.startMins)}" inputmode="numeric" pattern="[0-9]{2}:[0-9]{2}" maxlength="5" oninput="syncAmpm(this)" onchange="updateStart(${index}, this.value)"><span class="stepper"><button type="button" tabindex="-1" onclick="bumpTime('start_${data.period}',5)">&#9650;</button><button type="button" tabindex="-1" onclick="bumpTime('start_${data.period}',-5)">&#9660;</button></span></div></td>
+                        <td><div class="time-box"><span class="ampm">${ampmOf(minutesToTime(data.endMins))}</span><input type="text" class="time-input" id="end_${data.period}" value="${minutesToTime(data.endMins)}" inputmode="numeric" pattern="[0-9]{2}:[0-9]{2}" maxlength="5" oninput="syncAmpm(this)" onchange="updateEnd(${index}, this.value)"></div></td>
                         <td>${breakInputHtml}</td>
                     </tr>
                 `;
