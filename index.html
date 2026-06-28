@@ -917,27 +917,6 @@
                 link.click();
                 URL.revokeObjectURL(link.href);
 
-// --- فحص الخانات الفارغة في الأعمدة المحددة ---
-                let missingDataCount = 0;
-                let missingColumnsSet = new Set(); // لمعرفة أي الأعمدة تحديداً بها نقص
-                
-                const columnsToCheck = [
-                    "الفصل التدريبي", "الرقم المرجعي", "اليوم", 
-                    "الوقت", "المبنى", "القاعة", "رقم المدرب"
-                ];
-
-                finalData.forEach(row => {
-                    let hasMissing = false;
-                    columnsToCheck.forEach(col => {
-                        // التحقق مما إذا كانت القيمة فارغة أو غير موجودة
-                        if (!row[col] || String(row[col]).trim() === "") {
-                            hasMissing = true;
-                            missingColumnsSet.add(col);
-                        }
-                    });
-                    if (hasMissing) missingDataCount++;
-                });
-
                 // --- عرض النتيجة النهائية للمستخدم ---
                 if (missingDataCount > 0) {
                     let missingColsArray = Array.from(missingColumnsSet).join("، ");
