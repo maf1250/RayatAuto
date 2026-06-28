@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>أداة دمج جداول المحاضرات الذكية</title>
+    <title>أداة دمج جداول المحاضرات الذكية - TVTC</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
@@ -11,7 +11,7 @@
     <style>
         body {
             font-family: 'Cairo', sans-serif;
-            background-color: #f4f7f6;
+            background-color: #f4f9f8; /* خلفية بلمسة تركوازية خفيفة جداً */
             color: #333;
             margin: 0;
             padding: 40px 20px;
@@ -28,35 +28,36 @@
             position: relative;
         }
 
-.youtube-btn {
-    position: absolute;
-    top: 15px;
-    left: 15px;
-    width: 50px;
-    height: 50px;
-    background: #FF0000;
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    text-decoration: none;
-    box-shadow: 0 4px 10px rgba(0,0,0,.2);
-    transition: all .25s ease;
-}
+        .youtube-btn {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            width: 50px;
+            height: 50px;
+            background: #FF0000;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-decoration: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,.2);
+            transition: all .25s ease;
+        }
 
-.youtube-btn:hover {
-    transform: scale(1.1);
-    background: #cc0000;
-}
+        .youtube-btn:hover {
+            transform: scale(1.1);
+            background: #cc0000;
+        }
+        
         h1 {
             text-align: center;
-            color: #2c3e50;
+            color: #008e7e; /* لون المؤسسة الأساسي */
             font-size: 24px;
             margin-bottom: 20px;
         }
         .step-title {
             text-align: center;
-            color: #0056b3;
+            color: #008e7e; /* لون المؤسسة الأساسي */
             font-size: 18px;
             margin-bottom: 20px;
             font-weight: 800;
@@ -77,8 +78,8 @@
 
         .upload-group {
             margin-bottom: 20px;
-            background: #f8f9fa;
-            border: 2px dashed #ced4da;
+            background: #fafdfa;
+            border: 2px dashed #8dc63f; /* الأخضر الليموني الخاص بالمؤسسة */
             padding: 15px;
             border-radius: 8px;
             text-align: center;
@@ -87,7 +88,7 @@
             display: block;
             font-weight: 600;
             margin-bottom: 10px;
-            color: #495057;
+            color: #008e7e;
             font-size: 16px;
         }
         input[type="file"] {
@@ -96,20 +97,19 @@
             font-family: inherit;
         }
         .settings-group {
-            background: #fff3cd;
-            border: 1px solid #ffeeba;
+            background: #eef7f6; /* تركوازي فاتح جداً */
+            border: 1px solid #cbe6e3;
             padding: 20px;
             border-radius: 8px;
             margin-bottom: 20px;
         }
         .settings-group h3 {
             margin-top: 0;
-            color: #856404;
+            color: #006d60; /* تركوازي غامق */
             font-size: 16px;
             text-align: center;
         }
         
-        /* تعديلات تصميم قسم الإعدادات الافتراضية لمنع التزاحم */
         .settings-row {
             display: flex;
             flex-wrap: wrap;
@@ -122,17 +122,17 @@
             min-width: 140px;
             display: flex;
             flex-direction: column;
-            align-items: center; /* توسيط الحقول تحت النصوص */
+            align-items: center; 
             text-align: center;
         }
         .settings-row label {
             font-weight: 600;
             margin-bottom: 8px;
             font-size: 12px;
-            color: #5a4303;
+            color: #006d60;
         }
         .settings-row input {
-            width: 85px; /* تصغير المربعات بشكل ثابت */
+            width: 85px; 
             padding: 6px;
             border: 1px solid #ccc;
             border-radius: 4px;
@@ -143,8 +143,8 @@
         }
         .settings-row input:focus {
             outline: none;
-            border-color: #0056b3;
-            box-shadow: 0 0 5px rgba(0,86,179,0.3);
+            border-color: #008e7e;
+            box-shadow: 0 0 5px rgba(0,142,126,0.3);
         }
 
         .times-table {
@@ -160,7 +160,8 @@
             font-size: 13px;
         }
         .times-table th {
-            background: #ffeeba;
+            background: #cbe6e3;
+            color: #006d60;
         }
         .times-table input[type="time"],
         .times-table input[type="number"] {
@@ -179,14 +180,14 @@
         }
         .times-table input:focus {
             outline: none;
-            border-color: #0056b3;
-            background: #f8fbff;
+            border-color: #008e7e;
+            background: #eef7f6;
         }
         .checkbox-group {
             margin-top: 15px;
             font-size: 13px;
             font-weight: 600;
-            color: #856404;
+            color: #006d60;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -196,6 +197,7 @@
             width: 16px;
             height: 16px;
             cursor: pointer;
+            accent-color: #008e7e;
         }
         .btn-group {
             display: flex;
@@ -203,7 +205,7 @@
             margin-top: 10px;
         }
         .btn-process {
-            background-color: #0056b3;
+            background-color: #008e7e; /* لون المؤسسة الأساسي */
             color: #fff;
             border: none;
             padding: 15px 20px;
@@ -216,21 +218,36 @@
             font-family: 'Cairo', sans-serif;
             flex: 1;
         }
-        .btn-process:hover { background-color: #004494; }
-        .btn-process:disabled { background-color: #99badd; cursor: not-allowed; }
+        .btn-process:hover { background-color: #006d60; }
+        .btn-process:disabled { background-color: #99c7c2; cursor: not-allowed; }
         
         .btn-secondary { background-color: #6c757d; }
         .btn-secondary:hover { background-color: #5a6268; }
 
-        .btn-reset { background-color: #17a2b8; width: auto; padding: 8px 15px; margin-bottom:15px; font-size:13px; display: block; margin: 0 auto 15px;}
-        .btn-reset:hover { background-color: #138496; }
+        .btn-reset { 
+            background-color: #8dc63f; /* الأخضر الليموني */
+            color: #1a3300; 
+            width: auto; 
+            padding: 8px 15px; 
+            margin-bottom:15px; 
+            font-size:13px; 
+            display: block; 
+            margin: 0 auto 15px;
+            font-family: inherit;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+        .btn-reset:hover { background-color: #7ab32e; }
 
         .status-msg {
             text-align: center;
             margin-top: 15px;
             font-weight: 600;
         }
-        .success { color: #28a745; }
+        .success { color: #008e7e; }
         .error { color: #dc3545; }
     </style>
 </head>
@@ -287,7 +304,7 @@
                     </div>
                 </div>
                 
-                <button class="btn-process btn-reset" onclick="generateTimes()">إعادة ضبط الجدول بناءً على الافتراضي</button>
+                <button class="btn-reset" onclick="generateTimes()">إعادة ضبط الجدول بناءً على الافتراضي</button>
 
                 <table class="times-table">
                     <thead>
@@ -307,7 +324,7 @@
                     <input type="checkbox" id="adjustEvenPeriods" checked>
                     <label for="adjustEvenPeriods" 
                            title="عند وجود مقرر ذو ساعة اتصال واحدة فقط في محاضرة ما، فسيقوم النظام بإضافة دقيقة واحدة لكي لا يتعارض مع مقرر فردي في المحاضرة السابقة" 
-                           style="cursor: help; border-bottom: 1px dashed #856404; padding-bottom: 2px;">
+                           style="cursor: help; border-bottom: 1px dashed #006d60; padding-bottom: 2px;">
                         إضافة دقيقة للمحاضرات الفردية (تفادياً للتعارض)
                     </label>
                 </div>
@@ -536,13 +553,13 @@
             return false;
         }
 
-function isPractical(courseName, courseCode) {
-    let name = String(courseName || "").trim();
-    let code = String(courseCode || "").trim();
-    if (name.includes('(ع)') || name.includes('عملي') || name.endsWith(' ع')) return true;
-    if (code.includes('(ع)') || code.includes('عملي') || code.endsWith(' ع') || code.includes(' ع ')) return true;
-    return false;
-}
+        function isPractical(courseName, courseCode) {
+            let name = String(courseName || "").trim();
+            let code = String(courseCode || "").trim();
+            if (name.includes('(ع)') || name.includes('عملي') || name.endsWith(' ع')) return true;
+            if (code.includes('(ع)') || code.includes('عملي') || code.endsWith(' ع') || code.includes(' ع ')) return true;
+            return false;
+        }
 
         function extractCourseBase(str) {
             if (!str) return "";
@@ -700,7 +717,7 @@ function isPractical(courseName, courseCode) {
                             fetchedTrainerId = matchedSl03['رقم الحاسب'] || matchedSl03['رقم المدرب'] || matchedSl03['رقم الموظف'] || matchedSl03['الرقم الوظيفي'] || "";
                         }
                     }
-if (fetchedTrainerId) {
+                    if (fetchedTrainerId) {
                         fetchedTrainerId = String(fetchedTrainerId).trim().padStart(7, '0');
                     }
                     let groupKey = rBase + "|" + lectureType + "|" + rSection;
@@ -801,7 +818,7 @@ if (fetchedTrainerId) {
 
                 statusDiv.innerHTML =
                 `<span class="success">تمت معالجة الجدول واستخراجه بنجاح!</span><br>
-                 <span>عدد الصفوف النهائية: ${finalData.length}</span>`;
+                 <span style="color: #006d60;">عدد الصفوف النهائية: ${finalData.length}</span>`;
 
             } catch (error) {
                 console.error(error);
