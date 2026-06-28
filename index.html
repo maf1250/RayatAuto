@@ -862,7 +862,7 @@
 
                 if (missingDataCount > 0) {
                     let missingColsArray = Array.from(missingColumnsSet).join(" ، ");
-                    let confirmMsg = `⚠️ تنبيه هام:\n\nهناك (${missingDataCount}) صفًا في الجدول النهائي تحتوي على خلايا فارغة!\n\nالنقص متركز في الأعمدة التالية:\n[ ${missingColsArray} ]\n\nهل تريد الاستمرار واستخراج ملف الإكسل على أية حال؟`;              
+                    let confirmMsg = `⚠️ تنبيه هام:\n\nهناك (${missingDataCount}) صفًا في الجدول النهائي تحتوي على خانات فارغة!\n\nالنقص موجود في الأعمدة التالية:\n[ ${missingColsArray} ]\n\nهل تريد الاستمرار واستخراج ملف الإكسل على أية حال؟`;              
                     if (!confirm(confirmMsg)) {
                         statusDiv.innerHTML = `<div style="background-color: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; border: 1px solid #ffeeba; font-weight: 600;">
                             <i data-lucide="x-circle" style="color: #dc3545;"></i> تم إيقاف استخراج الجدول لمراجعة النواقص في الملفات.
@@ -926,7 +926,7 @@
                         <div style="display: flex; align-items: center; gap: 8px; font-weight: bold; color: #d39e00; margin-bottom: 5px;">
                             <i data-lucide="alert-triangle"></i> تنبيه هام:
                         </div>
-                        يوجد <b>${missingDataCount}</b> صفوف تحتوي على خانات فارغة! <br>
+                        عدد الصفوف التي تحتوي على خانات فارغة: <b>${missingDataCount}</b> <br>
                         النقص موجود في عمود/أعمدة: <b>[ ${missingColsArray} ]</b><br>
                         <span style="color: #666; font-size: 12px;"><i data-lucide="info" style="width: 14px; height:14px;"></i> نأمل فتح الملف، ومراجعة هذه الخانات وتعبئتها أو التأكد من سبب عدم تطابقها.</span>
                      </div>`;
