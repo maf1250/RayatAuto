@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="format-detection" content="telephone=no">
     <title>أداة دمج جداول المحاضرات الذكية</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
     
@@ -141,31 +140,34 @@
         .times-table th, .times-table td { border: 1px solid #ccc; padding: 6px; font-size: 13px; }
         .times-table th { background: #cbe6e3; color: #006d60; }
         
-        input[type="time" lang="en"],
-        input[type="number" lang="en"],
+        .time-input,
+        input[type="number"],
         .times-table td strong {
             font-family: Arial, Helvetica, sans-serif;
             text-align: center;
-            direction: ltr;
-            unicode-bidi: bidi-override;
-            font-variant-numeric: lining-nums;
         }
 
-        .times-table input[type="time" lang="en"],
-        .times-table input[type="number" lang="en"] {
+        .times-table .time-input,
+        .times-table input[type="number"] {
             border: 1px solid #ddd;
             border-radius: 4px;
+            width: 90%;
             background: transparent;
-            padding: 2px 4px;
-            font-size: 13px;
-            text-align: center;
+            font-size: 14px;
+            padding: 4px;
+            direction: ltr;
         }
-        
-        /* إعطاء عرض كافي لخانة الوقت ليظهر العداد الخاص بها بوضوح */
-        .times-table input[type="time" lang="en"] { width: 115px; }
-        
-        /* تصغير عرض خانة الاستراحة */
-        .times-table input[type="number" lang="en"] { width: 45px; }
+        .times-table input[type="number"] { width: 60px; }
+
+        /* عرض الوقت بصيغة 12 ساعة: أرقام لاتينية + ص/م — مستقل تماماً عن لغة النظام */
+        .time12 {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            color: #006d60;
+            margin-top: 3px;
+            direction: ltr;
+        }
         
         .btn-process {
             background-color: #008e7e;
@@ -283,8 +285,7 @@
             <div class="settings-group">
                 <h3>الإعدادات الافتراضية (لتعبئة الجدول سريعاً)</h3>
                 <div class="settings-row">
-                    <!-- تمت إضافة خاصية العداد step="60" لخانة الوقت -->
-                    <div><label>وقت بدء المحاضرة الأولى:</label><input type="time" id="startTime" value="08:00" step="60" lang="en" onchange="generateTimes()"></div>
+                    <div><label>وقت بدء المحاضرة الأولى:</label><input type="text" class="time-input" id="startTime" value="08:00" inputmode="numeric" pattern="[0-9]{2}:[0-9]{2}" maxlength="5" placeholder="HH:MM" onchange="generateTimes()"></div>
                     <div><label>مدة المحاضرة (دقيقة):</label><input type="number" id="duration" value="50" lang="en" onchange="generateTimes()"></div>
                     <div><label>الاستراحة (بعد 2 ، 4 ، 6 ، 8):</label><input type="number" id="defaultBreakTime" value="5" lang="en" onchange="generateTimes()"></div>
                 </div>
@@ -365,10 +366,20 @@
             return (isNaN(h) ? 0 : h) * 60 + (isNaN(m) ? 0 : m);
         }
 
-        function minutesToTime(mins) { 
-            let h = Math.floor(mins / 60) % 24; 
-            let m = mins % 60; 
-            return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`; 
+        function minutesToTime(mins) {
+            let h = Math.floor(mins / 60) % 24;
+            let m = mins % 60;
+            return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+        }
+
+        // يُرجِع الوقت بصيغة 12 ساعة بأرقام لاتينية + علامة ص/م (لا يعتمد على لغة النظام)
+        function to12hAr(hhmm) {
+            let [h, m] = String(hhmm).split(':').map(Number);
+            if (isNaN(h)) h = 0;
+            if (isNaN(m)) m = 0;
+            let mark = (h < 12) ? 'ص' : 'م';
+            let h12 = h % 12; if (h12 === 0) h12 = 12;
+            return `${String(h12).padStart(2,'0')}:${String(m).padStart(2,'0')} ${mark}`;
         }
 
         function generateTimes() {
@@ -398,13 +409,12 @@
             tbody.innerHTML = '';
             timesData.forEach((data, index) => {
                 let breakInputHtml = index < 9 ? 
-                    `<input type="number" min="0" value="${data.breakAfter}" step="1" lang="en" onchange="updateBreak(${index}, this.value)">` : '-';
+                    `<input type="number" min="0" value="${data.breakAfter}" lang="en" onchange="updateBreak(${index}, this.value)">` : '-';
                 tbody.innerHTML += `
                     <tr>
                         <td><strong>${data.period}</strong></td>
-                        <!-- إضافة عداد الوقت step="60" لخانة وقت البدء والانتهاء -->
-                        <td><input type="time" id="start_${data.period}" value="${minutesToTime(data.startMins)}" step="60" lang="en" onchange="updateStart(${index}, this.value)"></td>
-                        <td><input type="time" id="end_${data.period}" value="${minutesToTime(data.endMins)}" step="60" lang="en" onchange="updateEnd(${index}, this.value)"></td>
+                        <td><input type="text" class="time-input" id="start_${data.period}" value="${minutesToTime(data.startMins)}" inputmode="numeric" pattern="[0-9]{2}:[0-9]{2}" maxlength="5" onchange="updateStart(${index}, this.value)"><div class="time12">${to12hAr(minutesToTime(data.startMins))}</div></td>
+                        <td><input type="text" class="time-input" id="end_${data.period}" value="${minutesToTime(data.endMins)}" inputmode="numeric" pattern="[0-9]{2}:[0-9]{2}" maxlength="5" onchange="updateEnd(${index}, this.value)"><div class="time12">${to12hAr(minutesToTime(data.endMins))}</div></td>
                         <td>${breakInputHtml}</td>
                     </tr>
                 `;
@@ -440,10 +450,6 @@
                 timesData[i].endMins = timesData[i].startMins + duration;
             }
             renderTable();
-            document.querySelectorAll('input[type="time"],input[type="number"]').forEach(el=>{
-                el.setAttribute("lang","en");
-                el.setAttribute("inputmode","numeric");
-            });
         }
 
         function readFileAsync(file) {
