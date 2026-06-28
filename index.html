@@ -549,7 +549,7 @@
                     });
                 });
 
-                // 3. ترتيب المحاضرات (الخوارزمية الأصلية لمنع تشتت الفرز)
+                // 3. ترتيب المحاضرات للدمج
                 rawLectures.sort((a, b) => {
                     if (a.section !== b.section) return a.section.localeCompare(b.section);
                     if (a.dayOrder !== b.dayOrder) return a.dayOrder - b.dayOrder;
@@ -583,6 +583,16 @@
                     }
                     mergedLectures.push({...current});
                 }
+
+                // --------------------------------------------------------
+                // إضافة جديدة: إعادة الترتيب النهائي لكي تظهر الأوقات متسلسلة في الإكسل
+                // يتم الترتيب حسب: الشعبة -> اليوم -> الوقت
+                mergedLectures.sort((a, b) => {
+                    if (a.section !== b.section) return a.section.localeCompare(b.section);
+                    if (a.dayOrder !== b.dayOrder) return a.dayOrder - b.dayOrder;
+                    return a.startP - b.startP;
+                });
+                // --------------------------------------------------------
 
                 // 4. دمج الوقت 
                 let adjustEven = document.getElementById('adjustEvenPeriods').checked;
