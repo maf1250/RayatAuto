@@ -16,7 +16,6 @@
             font-family: 'Cairo', sans-serif;
         }
         body {
-            font-family: 'Cairo', sans-serif;
             background-color: #f4f9f8;
             color: #333;
             margin: 0;
@@ -137,23 +136,30 @@
             text-align: center;
             background: #fff;
             margin-bottom: 10px;
-            font-family: inherit;
         }
         .times-table th, .times-table td { border: 1px solid #ccc; padding: 6px; font-size: 13px; }
         .times-table th { background: #cbe6e3; color: #006d60; }
+        
+        /* -------------- PATCH: إجبار الأرقام الإنجليزية -------------- */
+        input[type="time"],
+        input[type="number"],
+        .times-table td strong {
+            font-family: Arial, Helvetica, sans-serif !important;
+            direction: ltr !important;
+            text-align: center;
+        }
+        /* ------------------------------------------------------------- */
+
         .times-table input[type="time"],
         .times-table input[type="number"] {
             border: 1px solid #ddd;
             border-radius: 4px;
-            text-align: center;
-            font-family: inherit;
-            direction: ltr;
             width: 90%;
             background: transparent;
             font-size: 14px;
             padding: 4px;
         }
-        .times-table input[type="number"] { width: 60px; direction: ltr; }
+        .times-table input[type="number"] { width: 60px; }
         
         .btn-process {
             background-color: #008e7e;
@@ -186,7 +192,7 @@
             align-items: center;
             gap: 6px;
             margin: 0 auto 15px;
-            font-family: inherit;
+            font-family: 'Cairo', sans-serif;
             border: none;
             border-radius: 4px;
             cursor: pointer;
@@ -271,9 +277,10 @@
             <div class="settings-group">
                 <h3>الإعدادات الافتراضية (لتعبئة الجدول سريعاً)</h3>
                 <div class="settings-row">
-                    <div><label>وقت بدء المحاضرة الأولى:</label><input type="time" id="startTime" value="08:00" onchange="generateTimes()"></div>
-                    <div><label>مدة المحاضرة (دقيقة):</label><input type="number" id="duration" value="50" onchange="generateTimes()"></div>
-                    <div><label>الاستراحة (بعد 2 ، 4 ، 6 ، 8):</label><input type="number" id="defaultBreakTime" value="5" onchange="generateTimes()"></div>
+                    <!-- PATCH: تمت إضافة lang="en" للحقول -->
+                    <div><label>وقت بدء المحاضرة الأولى:</label><input type="time" id="startTime" value="08:00" lang="en" onchange="generateTimes()"></div>
+                    <div><label>مدة المحاضرة (دقيقة):</label><input type="number" id="duration" value="50" lang="en" onchange="generateTimes()"></div>
+                    <div><label>الاستراحة (بعد 2 ، 4 ، 6 ، 8):</label><input type="number" id="defaultBreakTime" value="5" lang="en" onchange="generateTimes()"></div>
                 </div>
                 
                 <button class="btn-reset" onclick="generateTimes()">
@@ -384,13 +391,14 @@
             let tbody = document.getElementById('timesBody');
             tbody.innerHTML = '';
             timesData.forEach((data, index) => {
+                // PATCH: تمت إضافة lang="en" في حقول الجدول المتولدة برمجياً
                 let breakInputHtml = index < 9 ? 
-                    `<input type="number" min="0" value="${data.breakAfter}" onchange="updateBreak(${index}, this.value)">` : '-';
+                    `<input type="number" min="0" value="${data.breakAfter}" lang="en" onchange="updateBreak(${index}, this.value)">` : '-';
                 tbody.innerHTML += `
                     <tr>
                         <td><strong>${data.period}</strong></td>
-                        <td><input type="time" id="start_${data.period}" value="${minutesToTime(data.startMins)}" onchange="updateStart(${index}, this.value)"></td>
-                        <td><input type="time" id="end_${data.period}" value="${minutesToTime(data.endMins)}" onchange="updateEnd(${index}, this.value)"></td>
+                        <td><input type="time" id="start_${data.period}" value="${minutesToTime(data.startMins)}" lang="en" onchange="updateStart(${index}, this.value)"></td>
+                        <td><input type="time" id="end_${data.period}" value="${minutesToTime(data.endMins)}" lang="en" onchange="updateEnd(${index}, this.value)"></td>
                         <td>${breakInputHtml}</td>
                     </tr>
                 `;
@@ -515,7 +523,6 @@
                 let timetablesData = await readFileAsync(document.getElementById('timetables_file').files[0]);
                 let sl03Data = await readFileAsync(document.getElementById('sl03_file').files[0]);
 
-                // 1. جلب الأوقات 
                 let periods = {};
                 for(let i=1; i<=10; i++){
                     periods[i] = {
@@ -524,7 +531,6 @@
                     };
                 }
 
-                // 2. تفكيك وتهيئة ملف الجدول 
                 let rawLectures = [];
                 timetablesData.forEach(row => {
                     let term = String(row['SchoolDBN'] || row['الفصل'] || "").trim();
@@ -557,7 +563,6 @@
                     });
                 });
 
-                // 3. ترتيب المحاضرات للدمج
                 rawLectures.sort((a, b) => {
                     if (a.section !== b.section) return a.section.localeCompare(b.section);
                     if (a.dayOrder !== b.dayOrder) return a.dayOrder - b.dayOrder;
@@ -566,7 +571,6 @@
                     return a.startP - b.startP;
                 });
 
-                // دمج الفواصل 
                 let mergedLectures = [];
                 for (let i = 0; i < rawLectures.length; i++) {
                     let current = rawLectures[i];
@@ -592,17 +596,12 @@
                     mergedLectures.push({...current});
                 }
 
-                // --------------------------------------------------------
-                // إضافة جديدة: إعادة الترتيب النهائي لكي تظهر الأوقات متسلسلة في الإكسل
-                // يتم الترتيب حسب: الشعبة -> اليوم -> الوقت
                 mergedLectures.sort((a, b) => {
                     if (a.section !== b.section) return a.section.localeCompare(b.section);
                     if (a.dayOrder !== b.dayOrder) return a.dayOrder - b.dayOrder;
                     return a.startP - b.startP;
                 });
-                // --------------------------------------------------------
 
-                // 4. دمج الوقت 
                 let adjustEven = document.getElementById('adjustEvenPeriods').checked;
                 mergedLectures.forEach(lec => {
                     let pStart = lec.startP;
@@ -616,7 +615,6 @@
                     lec.timeStr = `${tStart} - ${tEnd}`;
                 });
 
-                // 5. المطابقة 
                 let finalData = [];
                 let sectionToCRN = {}; 
                 let usedSs01Rows = new Set(); 
@@ -694,7 +692,6 @@
                     });
                 });
 
-                // --- فحص الخانات الفارغة في الأعمدة المحددة عبر نافذة منبثقة ---
                 let missingCount = 0;
                 let missingCols = new Set();
                 const columnsToCheck = ["الفصل التدريبي", "الرقم المرجعي", "اليوم", "الوقت", "المبنى", "القاعة", "رقم المدرب"];
@@ -716,11 +713,10 @@
                         btn.disabled = false;
                         btn.innerHTML = `<i data-lucide="rocket"></i> استخراج الجدول النهائي`;
                         lucide.createIcons();
-                        return; // إيقاف إكمال العملية
+                        return;
                     }
                 }
 
-                // إنشاء وتصدير ملف الإكسل
                 const workbook = new ExcelJS.Workbook();
                 const worksheet = workbook.addWorksheet("الجدول النهائي", { views: [{ rightToLeft: true }] });
                 worksheet.columns = [
@@ -757,7 +753,6 @@
                 link.click();
                 URL.revokeObjectURL(link.href);
 
-                // --- الانتقال لصفحة النتائج (الخطوة 3) ---
                 document.getElementById('step2').classList.remove('active');
                 document.getElementById('step3').classList.add('active');
                 
