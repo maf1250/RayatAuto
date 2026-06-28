@@ -141,13 +141,10 @@
         .times-table th { background: #cbe6e3; color: #006d60; }
         
         input[type="time" lang="en"],
-        input[type="number"],
+        input[type="number" lang="en"],
         .times-table td strong {
             font-family: Arial, Helvetica, sans-serif;
-            direction: ltr;
             text-align: center;
-            unicode-bidi: plaintext;
-            font-variant-numeric: lining-nums;
         }
 
         .times-table input[type="time" lang="en"],
@@ -391,7 +388,6 @@
             let tbody = document.getElementById('timesBody');
             tbody.innerHTML = '';
             timesData.forEach((data, index) => {
-                // PATCH: تمت إضافة lang="en" في حقول الجدول المتولدة برمجياً
                 let breakInputHtml = index < 9 ? 
                     `<input type="number" min="0" value="${data.breakAfter}" lang="en" onchange="updateBreak(${index}, this.value)">` : '-';
                 tbody.innerHTML += `
