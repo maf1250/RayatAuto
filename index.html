@@ -5,12 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>أداة دمج جداول المحاضرات الذكية</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
-    
-    <!-- مكتبات معالجة الإكسيل -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-
     <style>
         * {
             font-family: 'Cairo', sans-serif;
@@ -296,6 +293,24 @@
 
         .lucide-spin { animation: spin 1.5s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+                .visitor-counter {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px dashed #b2d8d3;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: #006d60;
+            font-weight: 600;
+        }
+        .visitor-counter img {
+            height: 28px;
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body>
@@ -388,7 +403,9 @@
             <button class="btn-process" onclick="window.location.reload()"><i data-lucide="refresh-cw"></i> معالجة ملفات جديدة</button>
         </div>
     </div>
-
+ <div class="visitor-counter">
+   <img id="visitCounterImage" src="https://visitor-badge.laobi.icu/badge?page_id=https%3A%2F%2Fmaf1250.github.io%2FRayatAuto%2F&left_color=%235c5856&right_color=%23548160&radius=9" alt="عداد الزيارات">
+</div>
     <script>
         lucide.createIcons();
         let timesData = [];
