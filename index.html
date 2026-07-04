@@ -590,14 +590,6 @@ function isNameMatch(name1, name2) {
             return allMatchStripped;
         }
 
-        function isPractical(courseName, courseCode) {
-            let name = String(courseName || "").trim();
-            let code = String(courseCode || "").trim();
-            if (name.includes('(ع)') || name.includes('عملي') || name.endsWith(' ع')) return true;
-            if (code.includes('(ع)') || code.includes('عملي') || code.endsWith(' ع') || code.includes(' ع ')) return true;
-            return false;
-        }
-
   function extractCourseBase(str) {
             if (!str) return "";
             let cleaned = str.toString().replace(/\(ع\)/g, '').replace(/ ع /g, ' ').replace(/عملي/g, '').replace(/نظري/g, '');
@@ -606,6 +598,14 @@ function isNameMatch(name1, name2) {
             let numbersMatch = cleaned.match(/[0-9\u0660-\u0669]+/g);
             let numbers = numbersMatch ? numbersMatch.join('') : '';
             return letters + numbers; 
+        }
+        
+function isPractical(courseName, courseCode) {
+            let name = String(courseName || "").trim();
+            let code = String(courseCode || "").trim();
+            if (name.includes('(ع)') || name.includes('عملي') || name.endsWith(' ع') || name.includes('ورشة') || name.includes('رسم')) return true;
+            if (code.includes('(ع)') || code.includes('عملي') || code.endsWith(' ع') || code.includes(' ع ')) return true;
+            return false;
         }
 
         async function processFiles() {
@@ -723,14 +723,15 @@ function isNameMatch(name1, name2) {
                     let rCourseCode = row.courseCode;
                     let rTrainer = row.teacher;
                     let rSection = row.section;
-                    let isPrac = isPractical(rCourseName, rCourseCode);
-                    let lectureType = isPrac ? 'عملي' : 'نظري';
+                    
+                    // تلميح مبدئي فقط للتفريق بين الشقين إن وجدا
+                    let isPracHint = isPractical(rCourseName, rCourseCode);
                     let rBase = extractCourseBase(rCourseCode) || extractCourseBase(rCourseName);
 
                     let fetchedTrainerId = "";
                     if (rTrainer) {
                         let matchedSl03 = sl03Data.find(slRow => {
-                            let slTrainerName = String(slRow['اسم المدرب'] || slRow['اسم الموظف'] || slRow['الاسم'] || "").trim();
+                            let slTrainerName = String(slRow['اسم عضو هيئة التدريبي'] || slRow['اسم عضو هيئة التدريس'] || slRow['اسم المدرب'] || slRow['اسم الموظف'] || slRow['الاسم'] || "").trim();
                             return isNameMatch(rTrainer, slTrainerName);
                         });
                         if (matchedSl03) {
@@ -739,38 +740,78 @@ function isNameMatch(name1, name2) {
                     }
                     if (fetchedTrainerId) fetchedTrainerId = String(fetchedTrainerId).trim().padStart(7, '0');
 
-                    let groupKey = rBase + "|" + lectureType + "|" + rSection;
+                    let groupKey = rBase + "|" + (isPracHint ? 'عملي' : 'نظري') + "|" + rSection;
                     let matchedSs01Row = null;
 
                     if (sectionToCRN[groupKey] !== undefined) {
                         matchedSs01Row = ss01Data[sectionToCRN[groupKey]];
                     } else {
+                        // المحاولة 1: مطابقة الرمز + المدرب + التلميح (للمقررات ذات الشقين)
                         let bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
                             if (usedSs01Rows.has(idx)) return false; 
                             let sTrainer = String(sRow['اسم المدرب'] || sRow['المدرب'] || "").trim();
                             let sType = String(sRow['نوع الجدولة'] || sRow['نوع الشعبة'] || "").trim();
                             let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
                             if (sBase !== rBase) return false;
-                            let typeMatch = (!sType) || (isPrac && sType.includes('عملي')) || (!isPrac && sType.includes('نظري'));
+                            let typeMatch = (!sType) || (isPracHint && sType.includes('عملي')) || (!isPracHint && sType.includes('نظري'));
                             if (!typeMatch) return false;
                             return isNameMatch(sTrainer, rTrainer);
                         });
+                        
+                        // المحاولة 2: مطابقة الرمز + المدرب (تجاهل التلميح - يحل مشكلة كهرب-123)
+                        if (bestMatchIndex === -1) {
+                            bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
+                                if (usedSs01Rows.has(idx)) return false;
+                                let sTrainer = String(sRow['اسم المدرب'] || sRow['المدرب'] || "").trim();
+                                let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
+                                if (sBase !== rBase) return false;
+                                return isNameMatch(sTrainer, rTrainer);
+                            });
+                        }
+
+                        // المحاولة 3: مطابقة الرمز + التلميح (تجاهل المدرب)
                         if (bestMatchIndex === -1) {
                             bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
                                 if (usedSs01Rows.has(idx)) return false;
                                 let sType = String(sRow['نوع الجدولة'] || sRow['نوع الشعبة'] || "").trim();
                                 let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
                                 if (sBase !== rBase) return false;
-                                let typeMatch = (!sType) || (isPrac && sType.includes('عملي')) || (!isPrac && sType.includes('نظري'));
+                                let typeMatch = (!sType) || (isPracHint && sType.includes('عملي')) || (!isPracHint && sType.includes('نظري'));
                                 return typeMatch;
                             });
                         }
+
+                        // المحاولة 4: مطابقة الرمز فقط (الفرصة الأخيرة لجلب الرقم المرجعي)
+                        if (bestMatchIndex === -1) {
+                            bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
+                                if (usedSs01Rows.has(idx)) return false;
+                                let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
+                                return sBase === rBase;
+                            });
+                        }
+
                         if (bestMatchIndex !== -1) {
                             sectionToCRN[groupKey] = bestMatchIndex;
                             usedSs01Rows.add(bestMatchIndex); 
                             matchedSs01Row = ss01Data[bestMatchIndex];
                         }
                     }
+
+                    // --- التعديل الجديد: استخراج نوع المحاضرة الرسمي من تقرير SS01 ---
+                    let finalLectureType = "";
+                    if (matchedSs01Row) {
+                        let sTypeRaw = String(matchedSs01Row['نوع الجدولة'] || matchedSs01Row['نوع الشعبة'] || "").trim();
+                        if (sTypeRaw.includes('عملي')) {
+                            finalLectureType = 'عملي';
+                        } else if (sTypeRaw.includes('نظري')) {
+                            finalLectureType = 'نظري';
+                        } else {
+                            finalLectureType = isPracHint ? 'عملي' : 'نظري'; // احتياطي
+                        }
+                    } else {
+                        finalLectureType = isPracHint ? 'عملي' : 'نظري'; // احتياطي في حال عدم وجود المقرر في SS01
+                    }
+                    // -------------------------------------------------------------------
 
                     let fetchedCRN = matchedSs01Row ? (matchedSs01Row['الرقم المرجعي'] || matchedSs01Row['CRN'] || "") : "";
                     let bld = row.room ? row.room.substring(0, 5) : "";
@@ -787,8 +828,24 @@ function isNameMatch(name1, name2) {
                         "اسم المقرر": rCourseName,
                         "رمز المقرر": rCourseCode,
                         "الشعبة": rSection,
-                        "نوع المحاضرة": lectureType
+                        "نوع المحاضرة": finalLectureType
                     });
+                });
+
+                // معالجة الشعب المدمجة (نسخ الرقم المرجعي)
+                finalData.forEach(row => {
+                    if (!row["الرقم المرجعي"]) {
+                        let sibling = finalData.find(s => 
+                            s["الرقم المرجعي"] !== "" && 
+                            s["اليوم"] === row["اليوم"] &&
+                            s["الوقت"] === row["الوقت"] &&
+                            s["اسم المدرب"] === row["اسم المدرب"] &&
+                            extractCourseBase(s["رمز المقرر"]) === extractCourseBase(row["رمز المقرر"])
+                        );
+                        if (sibling) {
+                            row["الرقم المرجعي"] = sibling["الرقم المرجعي"];
+                        }
+                    }
                 });
 
                 let missingCount = 0;
