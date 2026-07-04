@@ -760,7 +760,7 @@ async function processFiles() {
                     }
                     if (fetchedTrainerId) fetchedTrainerId = String(fetchedTrainerId).trim().padStart(7, '0');
 
-                    let groupKey = rBase + "|" + finalLectureType + "|" + rSection;
+                    let groupKey = rBase + "|" + finalLectureType + "|" + row.dayName + "|" + row.timeStr + "|" + rTrainer;
                     let matchedSs01Row = null;
 
                     if (sectionToCRN[groupKey] !== undefined) {
@@ -838,37 +838,6 @@ async function processFiles() {
                     });
                 });
 
-// معالجة الشعب المدمجة (توحيد الرقم المرجعي للشعب التي تدرب في نفس الوقت)
-                let mergedGroups = {};
-                finalData.forEach(row => {
-                    // إنشاء مفتاح فريد يجمع بين اليوم، الوقت، المدرب، المقرر، ونوع المحاضرة
-                    let key = row["اليوم"] + "|" + row["الوقت"] + "|" + row["اسم المدرب"] + "|" + extractCourseBase(row["رمز المقرر"]) + "|" + row["نوع المحاضرة"];
-                    if (!mergedGroups[key]) {
-                        mergedGroups[key] = [];
-                    }
-                    mergedGroups[key].push(row);
-                });
-
-                // المرور على المجموعات وتوحيد الرقم المرجعي
-                for (let key in mergedGroups) {
-                    let group = mergedGroups[key];
-                    if (group.length > 1) { // إذا كان هناك أكثر من شعبة مدمجة في نفس الوقت
-                        // البحث عن أول رقم مرجعي متاح في هذه المجموعة
-                        let validCRN = "";
-                        for (let r of group) {
-                            if (r["الرقم المرجعي"]) {
-                                validCRN = r["الرقم المرجعي"];
-                                break;
-                            }
-                        }
-                        // إجبار جميع الشعب المدمجة على أخذ نفس الرقم المرجعي
-                        if (validCRN) {
-                            for (let r of group) {
-                                r["الرقم المرجعي"] = validCRN;
-                            }
-                        }
-                    }
-                }
                 let missingCount = 0;
                 let missingCols = new Set();
                 const columnsToCheck = ["الفصل التدريبي", "الرقم المرجعي", "اليوم", "الوقت", "المبنى", "القاعة", "رقم المدرب"];
