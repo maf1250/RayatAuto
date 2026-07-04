@@ -557,12 +557,17 @@
             });
         }
 
-        function normalizeArabicName(name) {
+function normalizeArabicName(name) {
             if (!name) return "";
-            return name.replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/عبد\s+/g, 'عبد').replace(/\s+/g, ' ').trim();
+            return name.replace(/[أإآ]/g, 'ا')
+                       .replace(/ة/g, 'ه')
+                       .replace(/ى/g, 'ي')
+                       .replace(/عبد\s+/g, 'عبد') // دمج "عبد الله" لتصبح "عبدالله"
+                       .replace(/\s+/g, ' ')
+                       .trim();
         }
 
-        function isNameMatch(name1, name2) {
+function isNameMatch(name1, name2) {
             if (!name1 || !name2) return false;
             let n1 = normalizeArabicName(name1);
             let n2 = normalizeArabicName(name2);
@@ -570,14 +575,25 @@
             let parts1 = n1.split(' ');
             let parts2 = n2.split(' ');
             let [shorter, longer] = parts1.length < parts2.length ? [parts1, parts2] : [parts2, parts1];
-            if (shorter[0] !== longer[0]) return false;
-            if (shorter[shorter.length - 1] !== longer[longer.length - 1]) return false;
-            if (shorter.length > 2) {
-                for (let i = 1; i < shorter.length - 1; i++) {
-                    if (!longer.includes(shorter[i])) return false;
+            let allMatch = true;
+            for (let i = 0; i < shorter.length; i++) {
+                if (!longer.includes(shorter[i])) {
+                    allMatch = false;
+                    break;
                 }
             }
-            return true;
+            if (allMatch) return true;
+            let longerStripped = longer.map(w => w.replace(/^ال/, ''));
+            let allMatchStripped = true;
+            for (let i = 0; i < shorter.length; i++) {
+                let shortWord = shorter[i].replace(/^ال/, '');
+                if (!longerStripped.includes(shortWord)) {
+                    allMatchStripped = false;
+                    break;
+                }
+            }
+            
+            return allMatchStripped;
         }
 
         function isPractical(courseName, courseCode) {
@@ -588,12 +604,12 @@
             return false;
         }
 
-        function extractCourseBase(str) {
+  function extractCourseBase(str) {
             if (!str) return "";
             let cleaned = str.toString().replace(/\(ع\)/g, '').replace(/ ع /g, ' ').replace(/عملي/g, '').replace(/نظري/g, '');
-            let lettersMatch = cleaned.match(/[a-zA-Zأ-ي]+/g);
+            let lettersMatch = cleaned.match(/[a-zA-Z\u0621-\u064A]+/g);
             let letters = lettersMatch ? lettersMatch.join('') : '';
-            let numbersMatch = cleaned.match(/\d+/g);
+            let numbersMatch = cleaned.match(/[0-9\u0660-\u0669]+/g);
             let numbers = numbersMatch ? numbersMatch.join('') : '';
             return letters + numbers; 
         }
