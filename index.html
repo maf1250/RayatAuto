@@ -607,7 +607,6 @@ function isPractical(courseName, courseCode) {
             if (code.includes('(ع)') || code.includes('عملي') || code.endsWith(' ع') || code.includes(' ع ')) return true;
             return false;
         }
-
 async function processFiles() {
             let btn = document.getElementById('processBtn');
             let statusDiv = document.getElementById('step2-status');
@@ -725,10 +724,8 @@ async function processFiles() {
                     let rSection = row.section;
                     let rBase = extractCourseBase(rCourseCode) || extractCourseBase(rCourseName);
 
-                    // 1. التلميح المبدئي من اسم المقرر في الجدول
                     let isPracHint = isPractical(rCourseName, rCourseCode);
 
-                    // 2. الفحص الذكي: هل هذا المقرر في رايات له شق واحد أم شقين؟
                     let hasTheoryInSS01 = false;
                     let hasPracInSS01 = false;
                     ss01Data.forEach(sRow => {
@@ -740,13 +737,14 @@ async function processFiles() {
                         }
                     });
 
-                    // إذا كان المقرر في رايات (عملي فقط) أو (نظري فقط)، نجبر التلميح ليتطابق مع رايات
+                    // تحديد ما إذا كان المقرر له شقين أم شق واحد
+                    let isTwoPartCourse = hasTheoryInSS01 && hasPracInSS01;
+
                     if (hasPracInSS01 && !hasTheoryInSS01) {
                         isPracHint = true; 
                     } else if (hasTheoryInSS01 && !hasPracInSS01) {
                         isPracHint = false; 
                     }
-                    // أما إذا كان له شقين، نعتمد على التلميح المبدئي (وجود حرف ع)
 
                     let finalLectureType = isPracHint ? 'عملي' : 'نظري';
 
@@ -768,6 +766,7 @@ async function processFiles() {
                     if (sectionToCRN[groupKey] !== undefined) {
                         matchedSs01Row = ss01Data[sectionToCRN[groupKey]];
                     } else {
+                        // المحاولة 1: مطابقة الرمز + النوع + المدرب
                         let bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
                             if (usedSs01Rows.has(idx)) return false; 
                             let sTrainer = String(sRow['اسم المدرب'] || sRow['المدرب'] || "").trim();
@@ -779,6 +778,7 @@ async function processFiles() {
                             return isNameMatch(sTrainer, rTrainer);
                         });
                         
+                        // المحاولة 2: مطابقة الرمز + النوع (تجاهل المدرب)
                         if (bestMatchIndex === -1) {
                             bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
                                 if (usedSs01Rows.has(idx)) return false;
@@ -790,24 +790,26 @@ async function processFiles() {
                             });
                         }
 
-                        // المحاولة 3: مطابقة الرمز + المدرب (تجاهل النوع)
-                        if (bestMatchIndex === -1) {
-                            bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
-                                if (usedSs01Rows.has(idx)) return false;
-                                let sTrainer = String(sRow['اسم المدرب'] || sRow['المدرب'] || "").trim();
-                                let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
-                                if (sBase !== rBase) return false;
-                                return isNameMatch(sTrainer, rTrainer);
-                            });
-                        }
+                        // المحاولات اليائسة (تجاهل النوع): مسموحة فقط إذا كان المقرر ليس له شقين!
+                        // هذا يمنع النظري من سرقة رقم العملي والعكس
+                        if (!isTwoPartCourse) {
+                            if (bestMatchIndex === -1) {
+                                bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
+                                    if (usedSs01Rows.has(idx)) return false;
+                                    let sTrainer = String(sRow['اسم المدرب'] || sRow['المدرب'] || "").trim();
+                                    let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
+                                    if (sBase !== rBase) return false;
+                                    return isNameMatch(sTrainer, rTrainer);
+                                });
+                            }
 
-                        // المحاولة 4: مطابقة الرمز فقط (الفرصة الأخيرة لجلب أي رقم مرجعي متبقي)
-                        if (bestMatchIndex === -1) {
-                            bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
-                                if (usedSs01Rows.has(idx)) return false;
-                                let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
-                                return sBase === rBase;
-                            });
+                            if (bestMatchIndex === -1) {
+                                bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
+                                    if (usedSs01Rows.has(idx)) return false;
+                                    let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
+                                    return sBase === rBase;
+                                });
+                            }
                         }
 
                         if (bestMatchIndex !== -1) {
@@ -832,11 +834,11 @@ async function processFiles() {
                         "اسم المقرر": rCourseName,
                         "رمز المقرر": rCourseCode,
                         "الشعبة": rSection,
-                        "نوع المحاضرة": finalLectureType // نعتمد دائماً على الفحص الذكي
+                        "نوع المحاضرة": finalLectureType
                     });
                 });
 
-                // معالجة الشعب المدمجة (نسخ الرقم المرجعي)
+                // معالجة الشعب المدمجة (نسخ الرقم المرجعي بذكاء)
                 finalData.forEach(row => {
                     if (!row["الرقم المرجعي"]) {
                         let sibling = finalData.find(s => 
@@ -844,7 +846,8 @@ async function processFiles() {
                             s["اليوم"] === row["اليوم"] &&
                             s["الوقت"] === row["الوقت"] &&
                             s["اسم المدرب"] === row["اسم المدرب"] &&
-                            extractCourseBase(s["رمز المقرر"]) === extractCourseBase(row["رمز المقرر"])
+                            extractCourseBase(s["رمز المقرر"]) === extractCourseBase(row["رمز المقرر"]) &&
+                            s["نوع المحاضرة"] === row["نوع المحاضرة"] // شرط إضافي لضمان عدم نسخ النظري للعملي
                         );
                         if (sibling) {
                             row["الرقم المرجعي"] = sibling["الرقم المرجعي"];
@@ -886,53 +889,7 @@ async function processFiles() {
                     { header: "الوقت", key: "الوقت" },
                     { header: "المبنى", key: "المبنى" },
                     { header: "القاعة", key: "القاعة" },
-                    { header: "رقم المدرب", key: "رقم المدرب" },
-                    { header: "", key: "empty_column" },
-                    { header: "اسم المدرب", key: "اسم المدرب" },
-                    { header: "اسم المقرر", key: "اسم المقرر" },
-                    { header: "رمز المقرر", key: "رمز المقرر" },
-                    { header: "الشعبة", key: "الشعبة" },
-                    { header: "نوع المحاضرة", key: "نوع المحاضرة" }
-                ];
-
-                finalData.forEach(row => worksheet.addRow(row));
-                worksheet.columns.forEach(column => {
-                    let maxLength = column.header ? column.header.length : 0;
-                    column.eachCell({ includeEmpty: true }, cell => {
-                        const len = cell.value ? cell.value.toString().length : 0;
-                        if (len > maxLength) maxLength = len;
-                    });
-                    column.width = maxLength === 0 ? 10 : maxLength + 3;
-                });
-
-                const buffer = await workbook.xlsx.writeBuffer();
-                const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-                const link = document.createElement("a");
-                link.href = URL.createObjectURL(blob);
-                link.download = "RayatAuto_New.xlsx";
-                link.click();
-                URL.revokeObjectURL(link.href);
-
-                document.getElementById('step2').classList.remove('active');
-                document.getElementById('step3').classList.add('active');
-                
-                document.getElementById('final-count-text').innerHTML = `عدد الصفوف النهائية: <span style="color:#008e7e;">${finalData.length}</span>`;
-                
-                if (missingCount > 0) {
-                    document.getElementById('warning-section').style.display = 'block';
-                    document.getElementById('missing-rows-text').innerHTML = `عدد الصفوف التي تحتوي على خانات فارغة: <b>${missingCount}</b>`;
-                    document.getElementById('missing-cols-text').innerHTML = `النقص موجود في عمود/أعمدة: <b>[ ${Array.from(missingCols).join('، ')} ]</b>`;
-                }
-
-            } catch (error) {
-                console.error(error);
-                statusDiv.innerHTML = "<span class='error'>حدث خطأ أثناء المعالجة: " + error.message + "</span>";
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = `<i data-lucide="rocket"></i> استخراج الجدول النهائي`;
-                lucide.createIcons();
-            }
-        }
+                    { header: "رق
     </script>
 </body>
 </html>
