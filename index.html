@@ -768,7 +768,6 @@ async function processFiles() {
                     if (sectionToCRN[groupKey] !== undefined) {
                         matchedSs01Row = ss01Data[sectionToCRN[groupKey]];
                     } else {
-                        // المحاولة 1: مطابقة الرمز + النوع + المدرب
                         let bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
                             if (usedSs01Rows.has(idx)) return false; 
                             let sTrainer = String(sRow['اسم المدرب'] || sRow['المدرب'] || "").trim();
@@ -780,7 +779,6 @@ async function processFiles() {
                             return isNameMatch(sTrainer, rTrainer);
                         });
                         
-                        // المحاولة 2: مطابقة الرمز + النوع (تجاهل المدرب لأن رايات غالباً لا تضع اسم المدرب)
                         if (bestMatchIndex === -1) {
                             bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
                                 if (usedSs01Rows.has(idx)) return false;
