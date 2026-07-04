@@ -608,7 +608,7 @@ function isPractical(courseName, courseCode) {
             return false;
         }
 
-        async function processFiles() {
+async function processFiles() {
             let btn = document.getElementById('processBtn');
             let statusDiv = document.getElementById('step2-status');
             
@@ -723,10 +723,32 @@ function isPractical(courseName, courseCode) {
                     let rCourseCode = row.courseCode;
                     let rTrainer = row.teacher;
                     let rSection = row.section;
-                    
-                    // تلميح مبدئي فقط للتفريق بين الشقين إن وجدا
-                    let isPracHint = isPractical(rCourseName, rCourseCode);
                     let rBase = extractCourseBase(rCourseCode) || extractCourseBase(rCourseName);
+
+                    // 1. التلميح المبدئي من اسم المقرر في الجدول
+                    let isPracHint = isPractical(rCourseName, rCourseCode);
+
+                    // 2. الفحص الذكي: هل هذا المقرر في رايات له شق واحد أم شقين؟
+                    let hasTheoryInSS01 = false;
+                    let hasPracInSS01 = false;
+                    ss01Data.forEach(sRow => {
+                        let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
+                        if (sBase === rBase) {
+                            let sType = String(sRow['نوع الجدولة'] || sRow['نوع الشعبة'] || "").trim();
+                            if (sType.includes('عملي')) hasPracInSS01 = true;
+                            if (sType.includes('نظري')) hasTheoryInSS01 = true;
+                        }
+                    });
+
+                    // إذا كان المقرر في رايات (عملي فقط) أو (نظري فقط)، نجبر التلميح ليتطابق مع رايات
+                    if (hasPracInSS01 && !hasTheoryInSS01) {
+                        isPracHint = true; 
+                    } else if (hasTheoryInSS01 && !hasPracInSS01) {
+                        isPracHint = false; 
+                    }
+                    // أما إذا كان له شقين، نعتمد على التلميح المبدئي (وجود حرف ع)
+
+                    let finalLectureType = isPracHint ? 'عملي' : 'نظري';
 
                     let fetchedTrainerId = "";
                     if (rTrainer) {
@@ -740,13 +762,13 @@ function isPractical(courseName, courseCode) {
                     }
                     if (fetchedTrainerId) fetchedTrainerId = String(fetchedTrainerId).trim().padStart(7, '0');
 
-                    let groupKey = rBase + "|" + (isPracHint ? 'عملي' : 'نظري') + "|" + rSection;
+                    let groupKey = rBase + "|" + finalLectureType + "|" + rSection;
                     let matchedSs01Row = null;
 
                     if (sectionToCRN[groupKey] !== undefined) {
                         matchedSs01Row = ss01Data[sectionToCRN[groupKey]];
                     } else {
-                        // المحاولة 1: مطابقة الرمز + المدرب + التلميح (للمقررات ذات الشقين)
+                        // المحاولة 1: مطابقة الرمز + النوع + المدرب
                         let bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
                             if (usedSs01Rows.has(idx)) return false; 
                             let sTrainer = String(sRow['اسم المدرب'] || sRow['المدرب'] || "").trim();
@@ -758,18 +780,7 @@ function isPractical(courseName, courseCode) {
                             return isNameMatch(sTrainer, rTrainer);
                         });
                         
-                        // المحاولة 2: مطابقة الرمز + المدرب (تجاهل التلميح - يحل مشكلة كهرب-123)
-                        if (bestMatchIndex === -1) {
-                            bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
-                                if (usedSs01Rows.has(idx)) return false;
-                                let sTrainer = String(sRow['اسم المدرب'] || sRow['المدرب'] || "").trim();
-                                let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
-                                if (sBase !== rBase) return false;
-                                return isNameMatch(sTrainer, rTrainer);
-                            });
-                        }
-
-                        // المحاولة 3: مطابقة الرمز + التلميح (تجاهل المدرب)
+                        // المحاولة 2: مطابقة الرمز + النوع (تجاهل المدرب لأن رايات غالباً لا تضع اسم المدرب)
                         if (bestMatchIndex === -1) {
                             bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
                                 if (usedSs01Rows.has(idx)) return false;
@@ -781,7 +792,18 @@ function isPractical(courseName, courseCode) {
                             });
                         }
 
-                        // المحاولة 4: مطابقة الرمز فقط (الفرصة الأخيرة لجلب الرقم المرجعي)
+                        // المحاولة 3: مطابقة الرمز + المدرب (تجاهل النوع)
+                        if (bestMatchIndex === -1) {
+                            bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
+                                if (usedSs01Rows.has(idx)) return false;
+                                let sTrainer = String(sRow['اسم المدرب'] || sRow['المدرب'] || "").trim();
+                                let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
+                                if (sBase !== rBase) return false;
+                                return isNameMatch(sTrainer, rTrainer);
+                            });
+                        }
+
+                        // المحاولة 4: مطابقة الرمز فقط (الفرصة الأخيرة لجلب أي رقم مرجعي متبقي)
                         if (bestMatchIndex === -1) {
                             bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
                                 if (usedSs01Rows.has(idx)) return false;
@@ -796,22 +818,6 @@ function isPractical(courseName, courseCode) {
                             matchedSs01Row = ss01Data[bestMatchIndex];
                         }
                     }
-
-                    // --- التعديل الجديد: استخراج نوع المحاضرة الرسمي من تقرير SS01 ---
-                    let finalLectureType = "";
-                    if (matchedSs01Row) {
-                        let sTypeRaw = String(matchedSs01Row['نوع الجدولة'] || matchedSs01Row['نوع الشعبة'] || "").trim();
-                        if (sTypeRaw.includes('عملي')) {
-                            finalLectureType = 'عملي';
-                        } else if (sTypeRaw.includes('نظري')) {
-                            finalLectureType = 'نظري';
-                        } else {
-                            finalLectureType = isPracHint ? 'عملي' : 'نظري'; // احتياطي
-                        }
-                    } else {
-                        finalLectureType = isPracHint ? 'عملي' : 'نظري'; // احتياطي في حال عدم وجود المقرر في SS01
-                    }
-                    // -------------------------------------------------------------------
 
                     let fetchedCRN = matchedSs01Row ? (matchedSs01Row['الرقم المرجعي'] || matchedSs01Row['CRN'] || "") : "";
                     let bld = row.room ? row.room.substring(0, 5) : "";
@@ -828,7 +834,7 @@ function isPractical(courseName, courseCode) {
                         "اسم المقرر": rCourseName,
                         "رمز المقرر": rCourseCode,
                         "الشعبة": rSection,
-                        "نوع المحاضرة": finalLectureType
+                        "نوع المحاضرة": finalLectureType // نعتمد دائماً على الفحص الذكي
                     });
                 });
 
