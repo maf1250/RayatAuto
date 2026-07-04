@@ -712,18 +712,11 @@ async function processFiles() {
                     }
                     lec.timeStr = `${tStart} - ${tEnd}`;
                 });
-
-                let finalData = [];
-                let sectionToCRN = {}; 
-                let usedSs01Rows = new Set(); 
-
+// --- الخطوة الأولى: تحديد نوع المحاضرة (نظري/عملي) لكل صف وإنشاء مفتاح الشعبة ---
                 mergedLectures.forEach(row => {
                     let rCourseName = row.courseName;
                     let rCourseCode = row.courseCode;
-                    let rTrainer = row.teacher;
-                    let rSection = row.section;
                     let rBase = extractCourseBase(rCourseCode) || extractCourseBase(rCourseName);
-
                     let isPracHint = isPractical(rCourseName, rCourseCode);
 
                     let hasTheoryInSS01 = false;
@@ -737,22 +730,144 @@ async function processFiles() {
                         }
                     });
 
-                    // تحديد ما إذا كان المقرر له شقين أم شق واحد
                     let isTwoPartCourse = hasTheoryInSS01 && hasPracInSS01;
-
                     if (hasPracInSS01 && !hasTheoryInSS01) {
-                        isPracHint = true; 
+                        isPracHint = true;
                     } else if (hasTheoryInSS01 && !hasPracInSS01) {
-                        isPracHint = false; 
+                        isPracHint = false;
                     }
 
-                    let finalLectureType = isPracHint ? 'عملي' : 'نظري';
+                    row.finalLectureType = isPracHint ? 'عملي' : 'نظري';
+                    row.rBase = rBase;
+                    row.isTwoPartCourse = isTwoPartCourse;
+                    // مفتاح الشعبة: يجمع بين المقرر، النوع، واسم الشعبة (لضمان أن كل محاضرات الأسبوع للشعبة تأخذ رقم واحد)
+                    row.csKey = rBase + "|" + row.finalLectureType + "|" + row.section;
+                });
 
+                // --- الخطوة الثانية: اكتشاف الشعب المدمجة وربطها معاً ---
+                let timeGroups = {};
+                mergedLectures.forEach(row => {
+                    // إذا اشتركت شعبتين في نفس اليوم، الوقت، المدرب، المقرر، والنوع.. فهما مدمجتان
+                    let timeKey = row.dayName + "|" + row.timeStr + "|" + row.teacher + "|" + row.rBase + "|" + row.finalLectureType;
+                    if (!timeGroups[timeKey]) timeGroups[timeKey] = new Set();
+                    timeGroups[timeKey].add(row.csKey);
+                });
+
+                let mergeSets = [];
+                for (let key in timeGroups) {
+                    let currentSet = Array.from(timeGroups[key]);
+                    if (currentSet.length === 0) continue;
+
+                    let intersectingIndices = [];
+                    for (let i = 0; i < mergeSets.length; i++) {
+                        if (currentSet.some(cs => mergeSets[i].has(cs))) {
+                            intersectingIndices.push(i);
+                        }
+                    }
+
+                    if (intersectingIndices.length === 0) {
+                        mergeSets.push(new Set(currentSet));
+                    } else {
+                        let firstIdx = intersectingIndices[0];
+                        currentSet.forEach(cs => mergeSets[firstIdx].add(cs));
+                        for (let i = 1; i < intersectingIndices.length; i++) {
+                            mergeSets[intersectingIndices[i]].forEach(cs => mergeSets[firstIdx].add(cs));
+                            mergeSets[intersectingIndices[i]] = null;
+                        }
+                        mergeSets = mergeSets.filter(s => s !== null);
+                    }
+                }
+
+                // التأكد من أن كل شعبة موجودة في مجموعة (حتى لو كانت مجموعة من شعبة واحدة غير مدمجة)
+                mergedLectures.forEach(row => {
+                    let found = mergeSets.some(s => s.has(row.csKey));
+                    if (!found) {
+                        mergeSets.push(new Set([row.csKey]));
+                    }
+                });
+
+                // --- الخطوة الثالثة: سحب رقم مرجعي واحد (CRN) لكل مجموعة شعب ---
+                let csKeyToCRN = {};
+                let usedSs01Rows = new Set();
+
+                mergeSets.forEach(mSet => {
+                    let repCsKey = Array.from(mSet)[0];
+                    let repLecture = mergedLectures.find(r => r.csKey === repCsKey);
+                    if (!repLecture) return;
+
+                    let rBase = repLecture.rBase;
+                    let finalLectureType = repLecture.finalLectureType;
+                    let rTrainer = repLecture.teacher;
+                    let isTwoPartCourse = repLecture.isTwoPartCourse;
+                    let isPracHint = finalLectureType === 'عملي';
+
+                    let bestMatchIndex = -1;
+
+                    // المحاولة 1: مطابقة الرمز + النوع + المدرب
+                    bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
+                        if (usedSs01Rows.has(idx)) return false;
+                        let sTrainer = String(sRow['اسم المدرب'] || sRow['المدرب'] || "").trim();
+                        let sType = String(sRow['نوع الجدولة'] || sRow['نوع الشعبة'] || "").trim();
+                        let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
+                        if (sBase !== rBase) return false;
+                        let typeMatch = (!sType) || (isPracHint && sType.includes('عملي')) || (!isPracHint && sType.includes('نظري'));
+                        if (!typeMatch) return false;
+                        return isNameMatch(sTrainer, rTrainer);
+                    });
+
+                    // المحاولة 2: مطابقة الرمز + النوع (تجاهل المدرب)
+                    if (bestMatchIndex === -1) {
+                        bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
+                            if (usedSs01Rows.has(idx)) return false;
+                            let sType = String(sRow['نوع الجدولة'] || sRow['نوع الشعبة'] || "").trim();
+                            let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
+                            if (sBase !== rBase) return false;
+                            let typeMatch = (!sType) || (isPracHint && sType.includes('عملي')) || (!isPracHint && sType.includes('نظري'));
+                            return typeMatch;
+                        });
+                    }
+
+                    // المحاولات اليائسة (تجاهل النوع): مسموحة فقط إذا كان المقرر ليس له شقين
+                    if (!isTwoPartCourse) {
+                        if (bestMatchIndex === -1) {
+                            bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
+                                if (usedSs01Rows.has(idx)) return false;
+                                let sTrainer = String(sRow['اسم المدرب'] || sRow['المدرب'] || "").trim();
+                                let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
+                                if (sBase !== rBase) return false;
+                                return isNameMatch(sTrainer, rTrainer);
+                            });
+                        }
+                        if (bestMatchIndex === -1) {
+                            bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
+                                if (usedSs01Rows.has(idx)) return false;
+                                let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
+                                return sBase === rBase;
+                            });
+                        }
+                    }
+
+                    let fetchedCRN = "";
+                    if (bestMatchIndex !== -1) {
+                        usedSs01Rows.add(bestMatchIndex);
+                        let matchedSs01Row = ss01Data[bestMatchIndex];
+                        fetchedCRN = matchedSs01Row['الرقم المرجعي'] || matchedSs01Row['CRN'] || "";
+                    }
+
+                    // تعيين هذا الرقم المرجعي لجميع الشعب في هذه المجموعة
+                    mSet.forEach(cs => {
+                        csKeyToCRN[cs] = fetchedCRN;
+                    });
+                });
+
+                // --- الخطوة الرابعة: بناء البيانات النهائية ---
+                let finalData = [];
+                mergedLectures.forEach(row => {
                     let fetchedTrainerId = "";
-                    if (rTrainer) {
+                    if (row.teacher) {
                         let matchedSl03 = sl03Data.find(slRow => {
                             let slTrainerName = String(slRow['اسم عضو هيئة التدريبي'] || slRow['اسم عضو هيئة التدريس'] || slRow['اسم المدرب'] || slRow['اسم الموظف'] || slRow['الاسم'] || "").trim();
-                            return isNameMatch(rTrainer, slTrainerName);
+                            return isNameMatch(row.teacher, slTrainerName);
                         });
                         if (matchedSl03) {
                             fetchedTrainerId = matchedSl03['رقم الحاسب'] || matchedSl03['رقم المدرب'] || matchedSl03['رقم الموظف'] || matchedSl03['الرقم الوظيفي'] || "";
@@ -760,84 +875,24 @@ async function processFiles() {
                     }
                     if (fetchedTrainerId) fetchedTrainerId = String(fetchedTrainerId).trim().padStart(7, '0');
 
-                    let groupKey = rBase + "|" + finalLectureType + "|" + row.dayName + "|" + row.timeStr + "|" + rTrainer;
-                    let matchedSs01Row = null;
-
-                    if (sectionToCRN[groupKey] !== undefined) {
-                        matchedSs01Row = ss01Data[sectionToCRN[groupKey]];
-                    } else {
-                        // المحاولة 1: مطابقة الرمز + النوع + المدرب
-                        let bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
-                            if (usedSs01Rows.has(idx)) return false; 
-                            let sTrainer = String(sRow['اسم المدرب'] || sRow['المدرب'] || "").trim();
-                            let sType = String(sRow['نوع الجدولة'] || sRow['نوع الشعبة'] || "").trim();
-                            let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
-                            if (sBase !== rBase) return false;
-                            let typeMatch = (!sType) || (isPracHint && sType.includes('عملي')) || (!isPracHint && sType.includes('نظري'));
-                            if (!typeMatch) return false;
-                            return isNameMatch(sTrainer, rTrainer);
-                        });
-                        
-                        // المحاولة 2: مطابقة الرمز + النوع (تجاهل المدرب)
-                        if (bestMatchIndex === -1) {
-                            bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
-                                if (usedSs01Rows.has(idx)) return false;
-                                let sType = String(sRow['نوع الجدولة'] || sRow['نوع الشعبة'] || "").trim();
-                                let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
-                                if (sBase !== rBase) return false;
-                                let typeMatch = (!sType) || (isPracHint && sType.includes('عملي')) || (!isPracHint && sType.includes('نظري'));
-                                return typeMatch;
-                            });
-                        }
-
-                        // المحاولات اليائسة (تجاهل النوع): مسموحة فقط إذا كان المقرر ليس له شقين!
-                        // هذا يمنع النظري من سرقة رقم العملي والعكس
-                        if (!isTwoPartCourse) {
-                            if (bestMatchIndex === -1) {
-                                bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
-                                    if (usedSs01Rows.has(idx)) return false;
-                                    let sTrainer = String(sRow['اسم المدرب'] || sRow['المدرب'] || "").trim();
-                                    let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
-                                    if (sBase !== rBase) return false;
-                                    return isNameMatch(sTrainer, rTrainer);
-                                });
-                            }
-
-                            if (bestMatchIndex === -1) {
-                                bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
-                                    if (usedSs01Rows.has(idx)) return false;
-                                    let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
-                                    return sBase === rBase;
-                                });
-                            }
-                        }
-
-                        if (bestMatchIndex !== -1) {
-                            sectionToCRN[groupKey] = bestMatchIndex;
-                            usedSs01Rows.add(bestMatchIndex); 
-                            matchedSs01Row = ss01Data[bestMatchIndex];
-                        }
-                    }
-
-                    let fetchedCRN = matchedSs01Row ? (matchedSs01Row['الرقم المرجعي'] || matchedSs01Row['CRN'] || "") : "";
                     let bld = row.room ? row.room.substring(0, 5) : "";
+                    let finalCRN = csKeyToCRN[row.csKey] || "";
 
                     finalData.push({
                         "الفصل التدريبي": row.term,
-                        "الرقم المرجعي": fetchedCRN,
+                        "الرقم المرجعي": finalCRN,
                         "اليوم": row.dayName,
                         "الوقت": row.timeStr,
                         "المبنى": bld,
                         "القاعة": row.room,
                         "رقم المدرب": fetchedTrainerId,
-                        "اسم المدرب": rTrainer,
-                        "اسم المقرر": rCourseName,
-                        "رمز المقرر": rCourseCode,
-                        "الشعبة": rSection,
-                        "نوع المحاضرة": finalLectureType
+                        "اسم المدرب": row.teacher,
+                        "اسم المقرر": row.courseName,
+                        "رمز المقرر": row.courseCode,
+                        "الشعبة": row.section,
+                        "نوع المحاضرة": row.finalLectureType
                     });
                 });
-
                 let missingCount = 0;
                 let missingCols = new Set();
                 const columnsToCheck = ["الفصل التدريبي", "الرقم المرجعي", "اليوم", "الوقت", "المبنى", "القاعة", "رقم المدرب"];
