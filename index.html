@@ -153,11 +153,9 @@
             padding: 4px;
         }
 
-        /* صندوق الوقت: حقل بلا حدود + حرف ص/م بجانبه ككتلة واحدة
-           (أرقام لاتينية دائماً، مستقل عن لغة النظام) */
-        .time-box {
+          .time-box {
             display: inline-flex;
-            flex-direction: row; /* الترتيب: ص/م يسار، ثم الرقم، ثم الأسهم يميناً */
+            flex-direction: row; 
             align-items: center;
             gap: 5px;
             direction: ltr;
@@ -185,8 +183,6 @@
             text-align: center;
         }
 
-        /* داخل صف الإعدادات، .settings-row div يفرض عموداً وعرضاً 140px على أي div؛
-           نعيد ضبط صندوق الوقت ليبقى أفقياً ومتلاصقاً (الرقم يمين، ص/م يسار) */
         .settings-row .time-box {
             display: inline-flex;
             flex-direction: row;
@@ -194,7 +190,6 @@
             flex: 0 0 auto;
         }
 
-        /* أسهم ▲▼ لحقول الوقت (تكّة = 5 دقائق)، تظهر يمين الصندوق */
         .time-box .stepper {
             display: inline-flex;
             flex-direction: column;
@@ -212,7 +207,6 @@
         }
         .time-box .stepper button:hover { color: #008e7e; }
 
-        /* أسهم حقول الأرقام (المدة/الاستراحة) تظهر على اليمين بدل اليسار */
         input[type="number"] { direction: ltr; }
         
         .btn-process {
