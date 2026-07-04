@@ -777,7 +777,6 @@ async function processFiles() {
                         mergeSets = mergeSets.filter(s => s !== null);
                     }
                 }
-
                 // التأكد من أن كل شعبة موجودة في مجموعة (حتى لو كانت مجموعة من شعبة واحدة غير مدمجة)
                 mergedLectures.forEach(row => {
                     let found = mergeSets.some(s => s.has(row.csKey));
