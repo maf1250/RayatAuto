@@ -880,16 +880,65 @@ async function processFiles() {
                     }
                 }
 
-                const workbook = new ExcelJS.Workbook();
+              const workbook = new ExcelJS.Workbook();
                 const worksheet = workbook.addWorksheet("الجدول النهائي", { views: [{ rightToLeft: true }] });
+                
+                // تعريف أعمدة ملف الإكسل
                 worksheet.columns = [
-                    { header: "الفصل التدريبي", key: "الفصل التدريبي" },
-                    { header: "الرقم المرجعي", key: "الرقم المرجعي" },
-                    { header: "اليوم", key: "اليوم" },
-                    { header: "الوقت", key: "الوقت" },
-                    { header: "المبنى", key: "المبنى" },
-                    { header: "القاعة", key: "القاعة" },
-                    { header: "رق
+                    { header: "الفصل التدريبي", key: "الفصل التدريبي", width: 15 },
+                    { header: "الرقم المرجعي", key: "الرقم المرجعي", width: 15 },
+                    { header: "اليوم", key: "اليوم", width: 15 },
+                    { header: "الوقت", key: "الوقت", width: 20 },
+                    { header: "المبنى", key: "المبنى", width: 10 },
+                    { header: "القاعة", key: "القاعة", width: 15 },
+                    { header: "رقم المدرب", key: "رقم المدرب", width: 15 },
+                    { header: "اسم المدرب", key: "اسم المدرب", width: 25 },
+                    { header: "اسم المقرر", key: "اسم المقرر", width: 25 },
+                    { header: "رمز المقرر", key: "رمز المقرر", width: 15 },
+                    { header: "الشعبة", key: "الشعبة", width: 10 },
+                    { header: "نوع المحاضرة", key: "نوع المحاضرة", width: 15 }
+                ];
+
+                // إضافة البيانات
+                worksheet.addRows(finalData);
+
+                // تنسيق الصف الأول (العناوين)
+                worksheet.getRow(1).font = { bold: true };
+                worksheet.getRow(1).alignment = { horizontal: 'center' };
+
+                // استخراج وتحميل الملف
+                const buffer = await workbook.xlsx.writeBuffer();
+                const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = "الجدول_النهائي.xlsx";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                // الانتقال لصفحة النجاح (الخطوة 3)
+                document.getElementById('step2').classList.remove('active');
+                document.getElementById('step3').classList.add('active');
+                
+                document.getElementById('final-count-text').innerText = `تم استخراج عدد (${finalData.length}) صف بنجاح.`;
+                
+                // إظهار التحذيرات إن وجدت
+                if (missingCount > 0) {
+                    document.getElementById('warning-section').style.display = 'block';
+                    document.getElementById('missing-rows-text').innerText = `عدد الصفوف التي تحتوي على نقص: ${missingCount}`;
+                    document.getElementById('missing-cols-text').innerText = `الأعمدة الناقصة: ${Array.from(missingCols).join(" ، ")}`;
+                } else {
+                    document.getElementById('warning-section').style.display = 'none';
+                }
+
+            } catch (error) {
+                console.error(error);
+                statusDiv.innerHTML = `<div class='error' style='background: #f8d7da; padding: 10px; border-radius: 5px; margin-top: 10px;'>حدث خطأ أثناء المعالجة: ${error.message}</div>`;
+                btn.disabled = false;
+                btn.innerHTML = `<i data-lucide="rocket"></i> استخراج الجدول النهائي`;
+                lucide.createIcons();
+            }
+        }
     </script>
 </body>
-</html>
+</html>   
