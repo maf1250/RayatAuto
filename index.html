@@ -796,41 +796,101 @@ async function processFiles() {
                     }
                 });
 
+           // دالة مساعدة لتوحيد صيغة الوقت للمطابقة (ترتب الأوقات وتزيل المسافات)
+                function getNormalizedTime(timeStr) {
+                    if (!timeStr) return "";
+                    let parts = String(timeStr).match(/\d{3,4}/g);
+                    if (!parts) return "";
+                    return parts.map(p => p.padStart(4, '0')).sort().join('');
+                }
+
                 // --- الخطوة الثالثة: سحب رقم مرجعي واحد (CRN) لكل مجموعة شعب ---
                 let csKeyToCRN = {};
-                let usedSs01Rows = new Set();
+                let usedCRNs = new Set(); // استخدام Set لمنع تكرار الرقم المرجعي لشعب مختلفة
 
                 mergeSets.forEach(mSet => {
                     let repCsKey = Array.from(mSet)[0];
-                    let repLecture = mergedLectures.find(r => r.csKey === repCsKey);
-                    if (!repLecture) return;
+                    let repLectures = mergedLectures.filter(r => r.csKey === repCsKey);
+                    if (repLectures.length === 0) return;
 
+                    let repLecture = repLectures[0];
                     let rBase = repLecture.rBase;
                     let finalLectureType = repLecture.finalLectureType;
                     let rTrainer = repLecture.teacher;
                     let isTwoPartCourse = repLecture.isTwoPartCourse;
                     let isPracHint = finalLectureType === 'عملي';
 
+                    // استخراج (اليوم + الوقت) لجميع محاضرات هذه الشعبة للمطابقة الدقيقة
+                    let repDayTimes = repLectures.map(r => r.dayName + "|" + getNormalizedTime(r.timeStr));
+                    let repDays = repLectures.map(r => r.dayName);
+
                     let bestMatchIndex = -1;
 
-                    // المحاولة 1: مطابقة الرمز + النوع + المدرب
-                    bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
-                        if (usedSs01Rows.has(idx)) return false;
+                    // المحاولة 1: مطابقة الرمز + النوع + المدرب + (اليوم والوقت) - تطابق مثالي
+                    bestMatchIndex = ss01Data.findIndex((sRow) => {
+                        let crn = sRow['الرقم المرجعي'] || sRow['CRN'] || "";
+                        if (crn && usedCRNs.has(crn)) return false;
+
                         let sTrainer = String(sRow['اسم المدرب'] || sRow['المدرب'] || "").trim();
                         let sType = String(sRow['نوع الجدولة'] || sRow['نوع الشعبة'] || "").trim();
                         let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
+                        let sDay = String(sRow['اليوم'] || "").trim();
+                        let sTime = getNormalizedTime(sRow['الوقت']);
+                        let sDayTime = sDay + "|" + sTime;
+
                         if (sBase !== rBase) return false;
                         let typeMatch = (!sType) || (isPracHint && sType.includes('عملي')) || (!isPracHint && sType.includes('نظري'));
                         if (!typeMatch) return false;
-                        return isNameMatch(sTrainer, rTrainer);
+
+                        return isNameMatch(sTrainer, rTrainer) && repDayTimes.includes(sDayTime);
                     });
 
-                    // المحاولة 2: مطابقة الرمز + النوع (تجاهل المدرب)
+                    // المحاولة 2: مطابقة الرمز + النوع + المدرب + اليوم (تجاهل الوقت في حال وجود اختلاف بسيط)
                     if (bestMatchIndex === -1) {
-                        bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
-                            if (usedSs01Rows.has(idx)) return false;
+                        bestMatchIndex = ss01Data.findIndex((sRow) => {
+                            let crn = sRow['الرقم المرجعي'] || sRow['CRN'] || "";
+                            if (crn && usedCRNs.has(crn)) return false;
+
+                            let sTrainer = String(sRow['اسم المدرب'] || sRow['المدرب'] || "").trim();
                             let sType = String(sRow['نوع الجدولة'] || sRow['نوع الشعبة'] || "").trim();
                             let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
+                            let sDay = String(sRow['اليوم'] || "").trim();
+
+                            if (sBase !== rBase) return false;
+                            let typeMatch = (!sType) || (isPracHint && sType.includes('عملي')) || (!isPracHint && sType.includes('نظري'));
+                            if (!typeMatch) return false;
+
+                            return isNameMatch(sTrainer, rTrainer) && repDays.includes(sDay);
+                        });
+                    }
+
+                    // المحاولة 3: مطابقة الرمز + النوع + المدرب (تجاهل اليوم والوقت)
+                    if (bestMatchIndex === -1) {
+                        bestMatchIndex = ss01Data.findIndex((sRow) => {
+                            let crn = sRow['الرقم المرجعي'] || sRow['CRN'] || "";
+                            if (crn && usedCRNs.has(crn)) return false;
+
+                            let sTrainer = String(sRow['اسم المدرب'] || sRow['المدرب'] || "").trim();
+                            let sType = String(sRow['نوع الجدولة'] || sRow['نوع الشعبة'] || "").trim();
+                            let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
+
+                            if (sBase !== rBase) return false;
+                            let typeMatch = (!sType) || (isPracHint && sType.includes('عملي')) || (!isPracHint && sType.includes('نظري'));
+                            if (!typeMatch) return false;
+
+                            return isNameMatch(sTrainer, rTrainer);
+                        });
+                    }
+
+                    // المحاولة 4: مطابقة الرمز + النوع (تجاهل المدرب واليوم والوقت)
+                    if (bestMatchIndex === -1) {
+                        bestMatchIndex = ss01Data.findIndex((sRow) => {
+                            let crn = sRow['الرقم المرجعي'] || sRow['CRN'] || "";
+                            if (crn && usedCRNs.has(crn)) return false;
+
+                            let sType = String(sRow['نوع الجدولة'] || sRow['نوع الشعبة'] || "").trim();
+                            let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
+
                             if (sBase !== rBase) return false;
                             let typeMatch = (!sType) || (isPracHint && sType.includes('عملي')) || (!isPracHint && sType.includes('نظري'));
                             return typeMatch;
@@ -840,8 +900,10 @@ async function processFiles() {
                     // المحاولات اليائسة (تجاهل النوع): مسموحة فقط إذا كان المقرر ليس له شقين
                     if (!isTwoPartCourse) {
                         if (bestMatchIndex === -1) {
-                            bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
-                                if (usedSs01Rows.has(idx)) return false;
+                            bestMatchIndex = ss01Data.findIndex((sRow) => {
+                                let crn = sRow['الرقم المرجعي'] || sRow['CRN'] || "";
+                                if (crn && usedCRNs.has(crn)) return false;
+
                                 let sTrainer = String(sRow['اسم المدرب'] || sRow['المدرب'] || "").trim();
                                 let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
                                 if (sBase !== rBase) return false;
@@ -849,8 +911,10 @@ async function processFiles() {
                             });
                         }
                         if (bestMatchIndex === -1) {
-                            bestMatchIndex = ss01Data.findIndex((sRow, idx) => {
-                                if (usedSs01Rows.has(idx)) return false;
+                            bestMatchIndex = ss01Data.findIndex((sRow) => {
+                                let crn = sRow['الرقم المرجعي'] || sRow['CRN'] || "";
+                                if (crn && usedCRNs.has(crn)) return false;
+
                                 let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
                                 return sBase === rBase;
                             });
@@ -859,9 +923,11 @@ async function processFiles() {
 
                     let fetchedCRN = "";
                     if (bestMatchIndex !== -1) {
-                        usedSs01Rows.add(bestMatchIndex);
                         let matchedSs01Row = ss01Data[bestMatchIndex];
                         fetchedCRN = matchedSs01Row['الرقم المرجعي'] || matchedSs01Row['CRN'] || "";
+                        if (fetchedCRN) {
+                            usedCRNs.add(fetchedCRN); // حجز الرقم المرجعي بالكامل حتى لا يُعطى لشعبة أخرى
+                        }
                     }
 
                     // تعيين هذا الرقم المرجعي لجميع الشعب في هذه المجموعة
