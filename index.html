@@ -1045,13 +1045,13 @@ async function processFiles() {
                 // الشيت الأول (الأساسي) - الجدول النهائي (بدون تكرار)
                 const worksheet1 = workbook.addWorksheet("الجدول النهائي", { views: [{ rightToLeft: true, activeCell: 'A1' }] });
                 worksheet1.columns = [
-                    { header: "الفصل التدريبي", key: "الفصل التدريبي", width: 15 },
-                    { header: "الرقم المرجعي", key: "الرقم المرجعي", width: 15 },
-                    { header: "اليوم", key: "اليوم", width: 15 },
-                    { header: "الوقت", key: "الوقت", width: 20 },
+                    { header: "الفصل التدريبي", key: "الفصل التدريبي", width: 13 },
+                    { header: "الرقم المرجعي", key: "الرقم المرجعي", width: 13 },
+                    { header: "اليوم", key: "اليوم", width: 9 },
+                    { header: "الوقت", key: "الوقت", width: 15 },
                     { header: "المبنى", key: "المبنى", width: 10 },
                     { header: "القاعة", key: "القاعة", width: 15 },
-                    { header: "رقم المدرب", key: "رقم المدرب", width: 15 }
+                    { header: "رقم المدرب", key: "رقم المدرب", width: 12 }
                 ];
                 // إضافة البيانات المفلترة (بدون تكرار)
                 worksheet1.addRows(uniqueFinalData);
@@ -1061,15 +1061,15 @@ async function processFiles() {
                 // الشيت الثاني - كامل البيانات (مع التكرار إن وجد)
                 const worksheet2 = workbook.addWorksheet("كامل البيانات", { views: [{ rightToLeft: true }] });
                 worksheet2.columns = [
-                    { header: "الفصل التدريبي", key: "الفصل التدريبي", width: 15 },
-                    { header: "الرقم المرجعي", key: "الرقم المرجعي", width: 15 },
-                    { header: "اليوم", key: "اليوم", width: 15 },
-                    { header: "الوقت", key: "الوقت", width: 20 },
+                    { header: "الفصل التدريبي", key: "الفصل التدريبي", width: 13 },
+                    { header: "الرقم المرجعي", key: "الرقم المرجعي", width: 13 },
+                    { header: "اليوم", key: "اليوم", width: 9 },
+                    { header: "الوقت", key: "الوقت", width: 15 },
                     { header: "المبنى", key: "المبنى", width: 10 },
                     { header: "القاعة", key: "القاعة", width: 15 },
-                    { header: "رقم المدرب", key: "رقم المدرب", width: 15 },
-                    { header: "اسم المدرب", key: "اسم المدرب", width: 25 },
-                    { header: "اسم المقرر", key: "اسم المقرر", width: 25 },
+                    { header: "رقم المدرب", key: "رقم المدرب", width: 12 },
+                    { header: "اسم المدرب", key: "اسم المدرب", width: 22 },
+                    { header: "اسم المقرر", key: "اسم المقرر", width: 22 },
                     { header: "رمز المقرر", key: "رمز المقرر", width: 15 },
                     { header: "الشعبة", key: "الشعبة", width: 10 },
                     { header: "نوع المحاضرة", key: "نوع المحاضرة", width: 15 }
