@@ -174,14 +174,6 @@
             font-size: 14px;
             direction: ltr;
         }
-        .time-box .ampm {
-            font-family: Arial, Helvetica, sans-serif;
-            font-size: 13px;
-            font-weight: 700;
-            color: #006d60;
-            min-width: 14px;
-            text-align: center;
-        }
 
         .settings-row .time-box {
             display: inline-flex;
@@ -335,7 +327,7 @@
             <div class="settings-group">
                 <h3>الإعدادات الافتراضية (لتعبئة الجدول سريعاً)</h3>
                 <div class="settings-row">
-                    <div><label>وقت بدء المحاضرة الأولى:</label><div class="time-box"><span class="ampm">ص</span><input type="text" class="time-input" id="startTime" value="08:00" inputmode="numeric" pattern="[0-9]{2}:[0-9]{2}" maxlength="5" placeholder="HH:MM" oninput="syncAmpm(this)" onchange="generateTimes()"><span class="stepper"><button type="button" tabindex="-1" onclick="bumpTime('startTime',5)">&#9650;</button><button type="button" tabindex="-1" onclick="bumpTime('startTime',-5)">&#9660;</button></span></div></div>
+                    <div><label>وقت بدء المحاضرة الأولى:</label><div class="time-box"><input type="text" class="time-input" id="startTime" value="08:00" inputmode="numeric" pattern="[0-9]{2}:[0-9]{2}" maxlength="5" placeholder="HH:MM" onchange="generateTimes()"><span class="stepper"><button type="button" tabindex="-1" onclick="bumpTime('startTime',5)">&#9650;</button><button type="button" tabindex="-1" onclick="bumpTime('startTime',-5)">&#9660;</button></span></div></div>
                     <div><label>مدة المحاضرة (دقيقة):</label><input type="number" id="duration" value="50" lang="en" onchange="generateTimes()"></div>
                     <div><label>الاستراحة (بعد 2 ، 4 ، 6 ، 8):</label><input type="number" id="defaultBreakTime" value="5" min="0" lang="en" onchange="generateTimes()"></div>
                 </div>
@@ -425,19 +417,6 @@
             return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
         }
 
-        // يُرجِع علامة الوقت (ص قبل الظهر / م بعده) — حرف عربي مستقل عن لغة النظام
-        function ampmOf(hhmm) {
-            let h = Number(String(hhmm).split(':')[0]);
-            if (isNaN(h)) h = 0;
-            return (h < 12) ? 'ص' : 'م';
-        }
-
-        // تحديث حرف ص/م لصندوق الحقل المُمرَّر
-        function syncAmpm(inp) {
-            let b = inp.closest('.time-box');
-            if (b) { let a = b.querySelector('.ampm'); if (a) a.textContent = ampmOf(inp.value); }
-        }
-
         // زيادة/إنقاص الوقت بمقدار delta دقيقة عبر الأسهم (يلتفّ عند منتصف الليل)
         function bumpTime(id, delta) {
             let inp = document.getElementById(id);
@@ -445,7 +424,6 @@
             let mins = timeToMinutes(inp.value) + delta;
             mins = ((mins % 1440) + 1440) % 1440;
             inp.value = minutesToTime(mins);
-            syncAmpm(inp);
             inp.dispatchEvent(new Event('change')); 
         }
 
@@ -480,8 +458,8 @@
                 tbody.innerHTML += `
                     <tr>
                         <td><strong>${data.period}</strong></td>
-                        <td><div class="time-box"><span class="ampm">${ampmOf(minutesToTime(data.startMins))}</span><input type="text" class="time-input" id="start_${data.period}" value="${minutesToTime(data.startMins)}" inputmode="numeric" pattern="[0-9]{2}:[0-9]{2}" maxlength="5" oninput="syncAmpm(this)" onchange="updateStart(${index}, this.value)"><span class="stepper"><button type="button" tabindex="-1" onclick="bumpTime('start_${data.period}',5)">&#9650;</button><button type="button" tabindex="-1" onclick="bumpTime('start_${data.period}',-5)">&#9660;</button></span></div></td>
-                        <td><div class="time-box"><span class="ampm">${ampmOf(minutesToTime(data.endMins))}</span><input type="text" class="time-input" id="end_${data.period}" value="${minutesToTime(data.endMins)}" inputmode="numeric" pattern="[0-9]{2}:[0-9]{2}" maxlength="5" oninput="syncAmpm(this)" onchange="updateEnd(${index}, this.value)"></div></td>
+                        <td><div class="time-box"><input type="text" class="time-input" id="start_${data.period}" value="${minutesToTime(data.startMins)}" inputmode="numeric" pattern="[0-9]{2}:[0-9]{2}" maxlength="5" onchange="updateStart(${index}, this.value)"><span class="stepper"><button type="button" tabindex="-1" onclick="bumpTime('start_${data.period}',5)">&#9650;</button><button type="button" tabindex="-1" onclick="bumpTime('start_${data.period}',-5)">&#9660;</button></span></div></td>
+                        <td><div class="time-box"><input type="text" class="time-input" id="end_${data.period}" value="${minutesToTime(data.endMins)}" inputmode="numeric" pattern="[0-9]{2}:[0-9]{2}" maxlength="5" onchange="updateEnd(${index}, this.value)"></div></td>
                         <td>${breakInputHtml}</td>
                     </tr>
                 `;
@@ -763,8 +741,8 @@ async function processFiles() {
                     row.finalLectureType = isPracHint ? 'عملي' : 'نظري';
                     row.rBase = rBase;
                     row.isTwoPartCourse = isTwoPartCourse;
-                    // مفتاح الشعبة: يجمع بين المقرر، النوع، واسم الشعبة (لضمان أن كل محاضرات الأسبوع للشعبة تأخذ رقم واحد)
-                    row.csKey = rBase + "|" + row.finalLectureType + "|" + row.section;
+                    // مفتاح الشعبة: يجمع بين المقرر، النوع، واسم الشعبة، والمدرب (لضمان فصل الأرقام المرجعية عند اختلاف المدربين لنفس الشعبة)
+                    row.csKey = rBase + "|" + row.finalLectureType + "|" + row.section + "|" + row.teacher;
                 });
 
                 // --- الخطوة الثانية: اكتشاف الشعب المدمجة وربطها معاً ---
