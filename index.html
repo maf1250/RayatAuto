@@ -446,7 +446,7 @@
             mins = ((mins % 1440) + 1440) % 1440;
             inp.value = minutesToTime(mins);
             syncAmpm(inp);
-            inp.dispatchEvent(new Event('change')); // يُشغّل updateStart/updateEnd/generateTimes
+            inp.dispatchEvent(new Event('change')); 
         }
 
         function generateTimes() {
