@@ -892,6 +892,40 @@ async function processFiles() {
                         "نوع المحاضرة": row.finalLectureType
                     });
                 });
+
+                // --- الخطوة الخامسة: فرز (ترتيب) البيانات النهائية ---
+                const dayOrderMap = {
+                    "الأحد": 1,
+                    "الإثنين": 2,
+                    "الثلاثاء": 3,
+                    "الأربعاء": 4,
+                    "الخميس": 5,
+                    "الجمعة": 6,
+                    "السبت": 7
+                };
+
+                finalData.sort((a, b) => {
+                    // 1. الفرز حسب الشعبة
+                    let secA = String(a["الشعبة"] || "");
+                    let secB = String(b["الشعبة"] || "");
+                    if (secA !== secB) return secA.localeCompare(secB);
+
+                    // 2. الفرز حسب الرقم المرجعي
+                    let crnA = String(a["الرقم المرجعي"] || "");
+                    let crnB = String(b["الرقم المرجعي"] || "");
+                    if (crnA !== crnB) return crnA.localeCompare(crnB);
+
+                    // 3. الفرز حسب اليوم (بناءً على الترتيب المنطقي للأيام)
+                    let dayA = dayOrderMap[a["اليوم"]] || 99;
+                    let dayB = dayOrderMap[b["اليوم"]] || 99;
+                    if (dayA !== dayB) return dayA - dayB;
+
+                    // 4. الفرز حسب الوقت
+                    let timeA = String(a["الوقت"] || "");
+                    let timeB = String(b["الوقت"] || "");
+                    return timeA.localeCompare(timeB);
+                });
+
                 let missingCount = 0;
                 let missingCols = new Set();
                 const columnsToCheck = ["الفصل التدريبي", "الرقم المرجعي", "اليوم", "الوقت", "المبنى", "القاعة", "رقم المدرب"];
@@ -978,4 +1012,4 @@ async function processFiles() {
         }
     </script>
 </body>
-</html>   
+</html>
