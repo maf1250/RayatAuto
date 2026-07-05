@@ -955,9 +955,22 @@ async function processFiles() {
                         return;
                     }
                 }
-const workbook = new ExcelJS.Workbook();
+
+                // فلترة البيانات لإزالة التكرار للشيت الأول بناءً على الأعمدة المحددة
+                const uniqueKeys = new Set();
+                const uniqueFinalData = [];
+
+                finalData.forEach(row => {
+                    const key = `${row["الفصل التدريبي"]}|${row["الرقم المرجعي"]}|${row["اليوم"]}|${row["الوقت"]}|${row["المبنى"]}|${row["القاعة"]}|${row["رقم المدرب"]}`;
+                    if (!uniqueKeys.has(key)) {
+                        uniqueKeys.add(key);
+                        uniqueFinalData.push(row);
+                    }
+                });
+
+                const workbook = new ExcelJS.Workbook();
                 
-                // الشيت الأول (الأساسي) - الجدول النهائي
+                // الشيت الأول (الأساسي) - الجدول النهائي (بدون تكرار)
                 const worksheet1 = workbook.addWorksheet("الجدول النهائي", { views: [{ rightToLeft: true, activeCell: 'A1' }] });
                 worksheet1.columns = [
                     { header: "الفصل التدريبي", key: "الفصل التدريبي", width: 15 },
@@ -968,11 +981,12 @@ const workbook = new ExcelJS.Workbook();
                     { header: "القاعة", key: "القاعة", width: 15 },
                     { header: "رقم المدرب", key: "رقم المدرب", width: 15 }
                 ];
-                worksheet1.addRows(finalData);
+                // إضافة البيانات المفلترة (بدون تكرار)
+                worksheet1.addRows(uniqueFinalData);
                 worksheet1.getRow(1).font = { bold: true };
                 worksheet1.getRow(1).alignment = { horizontal: 'center' };
 
-                // الشيت الثاني - كامل البيانات
+                // الشيت الثاني - كامل البيانات (مع التكرار إن وجد)
                 const worksheet2 = workbook.addWorksheet("كامل البيانات", { views: [{ rightToLeft: true }] });
                 worksheet2.columns = [
                     { header: "الفصل التدريبي", key: "الفصل التدريبي", width: 15 },
@@ -988,9 +1002,11 @@ const workbook = new ExcelJS.Workbook();
                     { header: "الشعبة", key: "الشعبة", width: 10 },
                     { header: "نوع المحاضرة", key: "نوع المحاضرة", width: 15 }
                 ];
+                // إضافة كامل البيانات
                 worksheet2.addRows(finalData);
                 worksheet2.getRow(1).font = { bold: true };
                 worksheet2.getRow(1).alignment = { horizontal: 'center' };
+                
                 // استخراج وتحميل الملف
                 const buffer = await workbook.xlsx.writeBuffer();
                 const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
