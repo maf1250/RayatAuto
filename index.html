@@ -705,16 +705,34 @@ async function processFiles() {
                     return a.startP - b.startP;
                 });
 
-                let adjustEven = document.getElementById('adjustEvenPeriods').checked;
+            let adjustEven = document.getElementById('adjustEvenPeriods').checked;
+                let baseDuration = parseInt(document.getElementById('duration').value) || 50; // جلب مدة المحاضرة من الإعدادات
+
                 mergedLectures.forEach(lec => {
                     let pStart = lec.startP;
                     let pEnd = lec.endP;
                     let tStart = periods[pStart]?.startRaw || "";
                     let tEnd = periods[pEnd]?.endRaw || "";
+                    
+                    // --- التعديل لحل مشكلة المحاضرات المدمجة وتجاهل الاستراحات بداخلها ---
+                    if (pEnd > pStart && tStart) {
+                        let numPeriods = (pEnd - pStart) + 1; // عدد المحاضرات المتصلة
+                        let correctEndMins = timeToMinutes(tStart) + (numPeriods * baseDuration); // الوقت الصافي
+                        tEnd = minutesToTime(correctEndMins); // تحديث وقت النهاية
+                    }
+                    // --------------------------------------------------------------------
+
                     if (adjustEven && tStart && tEnd) {
                         if (pStart % 2 === 0) { tStart = minutesToTime(timeToMinutes(tStart) + 1); }
                         if (pStart === pEnd && pStart % 2 === 0) { tEnd = minutesToTime(timeToMinutes(tEnd) + 1); }
                     }
+                    
+                    //  إزالة النقطتين الرأسيتين من الوقت
+                    tStart = tStart.replace(':', '');
+                    tEnd = tEnd.replace(':', '');
+                    
+                    lec.timeStr = `${tStart} - ${tEnd}`;
+                });
                     
                     //  إزالة النقطتين الرأسيتين من الوقت
                     tStart = tStart.replace(':', '');
