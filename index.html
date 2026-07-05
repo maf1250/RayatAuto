@@ -715,8 +715,14 @@ async function processFiles() {
                         if (pStart % 2 === 0) { tStart = minutesToTime(timeToMinutes(tStart) + 1); }
                         if (pStart === pEnd && pStart % 2 === 0) { tEnd = minutesToTime(timeToMinutes(tEnd) + 1); }
                     }
+                    
+                    //  إزالة النقطتين الرأسيتين من الوقت
+                    tStart = tStart.replace(':', '');
+                    tEnd = tEnd.replace(':', '');
+                    
                     lec.timeStr = `${tStart} - ${tEnd}`;
                 });
+    
 // --- الخطوة الأولى: تحديد نوع المحاضرة (نظري/عملي) لكل صف وإنشاء مفتاح الشعبة ---
                 mergedLectures.forEach(row => {
                     let rCourseName = row.courseName;
@@ -956,67 +962,48 @@ async function processFiles() {
                     }
                 }
 
-                // تجميع الأيام للمحاضرات التي لها نفس الوقت والمكان والمدرب (لإزالة التكرار في الشيت الأول)
-                const groupedDataMap = new Map();
+            // فلترة البيانات لإزالة التكرار للشيت الأول بناءً على الأعمدة المحددة
+                const uniqueKeys = new Set();
+                const uniqueFinalData = [];
 
                 finalData.forEach(row => {
-                    // المفتاح لا يتضمن "اليوم" لكي نجمع الأيام في صف واحد
-                    const key = `${row["الفصل التدريبي"]}|${row["الرقم المرجعي"]}|${row["الوقت"]}|${row["المبنى"]}|${row["القاعة"]}|${row["رقم المدرب"]}`;
-                    
-                    if (groupedDataMap.has(key)) {
-                        const existingRow = groupedDataMap.get(key);
-                        // إضافة اليوم إلى المصفوفة إذا لم يكن موجوداً
-                        if (!existingRow.daysArray.includes(row["اليوم"])) {
-                            existingRow.daysArray.push(row["اليوم"]);
-                        }
-                    } else {
-                        // إنشاء نسخة من الصف وإضافة مصفوفة الأيام
-                        groupedDataMap.set(key, { 
-                            ...row, 
-                            daysArray: [row["اليوم"]] 
-                        });
+                    const key = `${row["الفصل التدريبي"]}|${row["الرقم المرجعي"]}|${row["اليوم"]}|${row["الوقت"]}|${row["المبنى"]}|${row["القاعة"]}|${row["رقم المدرب"]}`;
+                    if (!uniqueKeys.has(key)) {
+                        uniqueKeys.add(key);
+                        uniqueFinalData.push(row);
                     }
-                });
-
-                // تحويل الخريطة إلى مصفوفة وترتيب الأيام
-                const uniqueFinalData = Array.from(groupedDataMap.values()).map(row => {
-                    // ترتيب الأيام بناءً على dayOrderMap الموجود مسبقاً في الكود
-                    row.daysArray.sort((a, b) => (dayOrderMap[a] || 99) - (dayOrderMap[b] || 99));
-                    row["اليوم"] = row.daysArray.join("، ");
-                    delete row.daysArray;
-                    return row;
                 });
 
                 const workbook = new ExcelJS.Workbook();
                 
-                // الشيت الأول (الأساسي) - الجدول النهائي (مجمع الأيام)
+                // الشيت الأول (الأساسي) - الجدول النهائي (بدون تكرار)
                 const worksheet1 = workbook.addWorksheet("الجدول النهائي", { views: [{ rightToLeft: true, activeCell: 'A1' }] });
                 worksheet1.columns = [
-                    { header: "الفصل التدريبي", key: "الفصل التدريبي", width: 13 },
-                    { header: "الرقم المرجعي", key: "الرقم المرجعي", width: 10 },
-                    { header: "اليوم", key: "اليوم", width: 10 }, 
-                    { header: "الوقت", key: "الوقت", width: 15 },
+                    { header: "الفصل التدريبي", key: "الفصل التدريبي", width: 15 },
+                    { header: "الرقم المرجعي", key: "الرقم المرجعي", width: 15 },
+                    { header: "اليوم", key: "اليوم", width: 15 },
+                    { header: "الوقت", key: "الوقت", width: 20 },
                     { header: "المبنى", key: "المبنى", width: 10 },
                     { header: "القاعة", key: "القاعة", width: 15 },
-                    { header: "رقم المدرب", key: "رقم المدرب", width: 11 }
+                    { header: "رقم المدرب", key: "رقم المدرب", width: 15 }
                 ];
-                // إضافة البيانات المجمعة (بدون تكرار)
+                // إضافة البيانات المفلترة (بدون تكرار)
                 worksheet1.addRows(uniqueFinalData);
                 worksheet1.getRow(1).font = { bold: true };
                 worksheet1.getRow(1).alignment = { horizontal: 'center' };
 
-                // الشيت الثاني - كامل البيانات (بالتفصيل لكل يوم)
+                // الشيت الثاني - كامل البيانات (مع التكرار إن وجد)
                 const worksheet2 = workbook.addWorksheet("كامل البيانات", { views: [{ rightToLeft: true }] });
                 worksheet2.columns = [
-                    { header: "الفصل التدريبي", key: "الفصل التدريبي", width: 13 },
-                    { header: "الرقم المرجعي", key: "الرقم المرجعي", width: 10 },
-                    { header: "اليوم", key: "اليوم", width: 10 },
-                    { header: "الوقت", key: "الوقت", width: 15 },
-                    { header: "المبنى", key: "المبنى", width: 8 },
+                    { header: "الفصل التدريبي", key: "الفصل التدريبي", width: 15 },
+                    { header: "الرقم المرجعي", key: "الرقم المرجعي", width: 15 },
+                    { header: "اليوم", key: "اليوم", width: 15 },
+                    { header: "الوقت", key: "الوقت", width: 20 },
+                    { header: "المبنى", key: "المبنى", width: 10 },
                     { header: "القاعة", key: "القاعة", width: 15 },
-                    { header: "رقم المدرب", key: "رقم المدرب", width: 11 },
-                    { header: "اسم المدرب", key: "اسم المدرب", width: 20 },
-                    { header: "اسم المقرر", key: "اسم المقرر", width: 20 },
+                    { header: "رقم المدرب", key: "رقم المدرب", width: 15 },
+                    { header: "اسم المدرب", key: "اسم المدرب", width: 25 },
+                    { header: "اسم المقرر", key: "اسم المقرر", width: 25 },
                     { header: "رمز المقرر", key: "رمز المقرر", width: 15 },
                     { header: "الشعبة", key: "الشعبة", width: 10 },
                     { header: "نوع المحاضرة", key: "نوع المحاضرة", width: 15 }
