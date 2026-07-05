@@ -590,15 +590,20 @@ function isNameMatch(name1, name2) {
             return allMatchStripped;
         }
 
-  function extractCourseBase(str) {
-            if (!str) return "";
-            let cleaned = str.toString().replace(/\(ع\)/g, '').replace(/ ع /g, ' ').replace(/عملي/g, '').replace(/نظري/g, '');
-            let lettersMatch = cleaned.match(/[a-zA-Z\u0621-\u064A]+/g);
-            let letters = lettersMatch ? lettersMatch.join('') : '';
-            let numbersMatch = cleaned.match(/[0-9\u0660-\u0669]+/g);
-            let numbers = numbersMatch ? numbersMatch.join('') : '';
-            return letters + numbers; 
-        }
+function extractCourseBase(str) {
+    if (!str) return "";
+    let cleaned = str.toString()
+        .replace(/\(ع\)/g, '')
+        .replace(/(^|\s)ع(?=\s|$)/g, ' ')
+        .replace(/عملي/g, '')
+        .replace(/نظري/g, '');
+        
+    let lettersMatch = cleaned.match(/[a-zA-Z\u0621-\u064A]+/g);
+    let letters = lettersMatch ? lettersMatch.join('') : '';
+    let numbersMatch = cleaned.match(/[0-9\u0660-\u0669]+/g);
+    let numbers = numbersMatch ? numbersMatch.join('') : '';
+    return letters + numbers; 
+}
         
 function isPractical(courseName, courseCode) {
             let name = String(courseName || "").trim();
