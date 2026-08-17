@@ -288,7 +288,85 @@
             align-items: center;
             gap: 10px;
         }
+
+        /* توسيع الحاوية في الخطوة 3 لتستوعب الجدول */
+        .container.wide { max-width: 900px !important; }
+
+        /* تنسيق التبويبات */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #cbe6e3;
+            padding-bottom: 10px;
+            justify-content: center;
+        }
+        .tab-btn {
+            background: #eef7f6;
+            border: 1px solid #cbe6e3;
+            padding: 10px 20px;
+            font-weight: 600;
+            color: #006d60;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: 0.3s;
+            font-family: 'Cairo', sans-serif;
+        }
+        .tab-btn:hover { background: #d9f0ed; }
+        .tab-btn.active { background: #008e7e; color: #fff; border-color: #008e7e; }
+
+        /* تنسيق الجدول */
+        .table-responsive {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: center;
+            font-size: 13px;
+            background: #fff;
+        }
+        .data-table th {
+            background: #008e7e;
+            color: white;
+            padding: 12px 8px;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        .data-table td {
+            border: 1px solid #e0e0e0;
+            padding: 10px 8px;
+        }
+        .data-table tr:nth-child(even) { background-color: #f9f9f9; }
+        .data-table tr:hover { background-color: #f1f8f7; }
+
+        /* تنسيق الفلتر */
+        .filter-container {
+            display: none;
+            margin-bottom: 15px;
+            text-align: right;
+        }
+        .filter-container select {
+            padding: 8px;
+            width: 50%;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-family: 'Cairo', sans-serif;
+            outline: none;
+        }
+        .filter-container select:focus { border-color: #008e7e; }
         
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
@@ -355,39 +433,77 @@
         </div>
 
         <!-- الخطوة 3: صفحة النتائج -->
+       <!-- الخطوة 3: صفحة النتائج -->
         <div id="step3" class="step">
-            <div class="result-card">
-                <div class="result-success-icon">
-                    <i data-lucide="check-circle-2" style="width: 60px; height: 60px;"></i>
-                </div>
-                <h2 style="color: #008e7e; margin-top: 0;">تمت معالجة الجدول واستخراجه بنجاح!</h2>
-                <p class="result-info" id="final-count-text"></p>
-                <p style="color: #008e7e">في حال عدم تثبيت إضافة رايات أوتو، يمكن تثبيتها من خلال زيارة الرابط:</p>
-                <a href="https://myalsh2030.github.io/rayatauto"
-                   target="_blank"
-                   style="color: #008e7e;">
-                   https://myalsh2030.github.io/rayatauto
-                </a>                               
-                <div id="warning-section" class="warning-box" style="display:none;">
-                    <div class="warning-title"><i data-lucide="alert-triangle"></i> تنبيه هام:</div>
-                    <p id="missing-rows-text" style="margin: 5px 0; font-size: 15px; color: #333;"></p>
-                    <p id="missing-cols-text" style="margin: 5px 0; font-size: 15px; color: #333;"></p>
-                    <p style="font-size: 13px; color: #666; margin-top: 10px; border-top: 1px solid #ffeeba; padding-top: 10px;">
-                        <i data-lucide="info" style="width: 14px; height: 14px; vertical-align: middle;"></i> 
-                        نأمل فتح الملف، ومراجعة هذه الخانات وتعبئتها أو التأكد من سبب عدم تطابقها.
-                    </p>
-                </div>
+            <h2 class="step-title"><i data-lucide="table"></i> معاينة الجدول النهائي</h2>
+            
+            <div class="action-buttons">
+                <button class="btn-process" onclick="copyToRayatAuto()" style="background-color: #28a745; width: auto; padding: 10px 20px;">
+                    <i data-lucide="clipboard-copy"></i> نسخ إلى رايات أوتو
+                </button>
+                <button class="btn-process btn-secondary" onclick="downloadExcel()" style="width: auto; padding: 10px 20px;">
+                    <i data-lucide="download"></i> تحميل كملف Excel
+                </button>
             </div>
-            <button class="btn-process" onclick="window.location.reload()"><i data-lucide="refresh-cw"></i> معالجة ملفات جديدة</button>
-        </div>
-   
+
+            <p style="text-align: center; font-size: 14px; margin-bottom: 10px;">
+                <span id="final-count-text" style="color: #008e7e; font-weight: bold;"></span>
+            </p>
+
+            <div class="tabs">
+                <button class="tab-btn active" id="tab-all" onclick="switchTab('all')">جدول الكلية كامل</button>
+                <button class="tab-btn" id="tab-trainer" onclick="switchTab('trainer')">جدول مدرب</button>
+                <button class="tab-btn" id="tab-section" onclick="switchTab('section')">جدول شعبة</button>
+            </div>
+
+            <div id="filter-container" class="filter-container">
+                <label for="data-filter">اختر: </label>
+                <select id="data-filter" onchange="renderTable()"></select>
+            </div>
+
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>المرجعي</th>
+                            <th>المقرر</th>
+                            <th>الشعبة</th>
+                            <th>اليوم</th>
+                            <th>الوقت</th>
+                            <th>القاعة</th>
+                            <th>المدرب</th>
+                        </tr>
+                    </thead>
+                    <tbody id="result-tbody">
+                        <!-- سيتم تعبئة البيانات هنا -->
+                    </tbody>
+                </table>
+            </div>
+                             
+            <div id="warning-section" class="warning-box" style="display:none;">
+                <div class="warning-title"><i data-lucide="alert-triangle"></i> تنبيه هام:</div>
+                <p id="missing-rows-text" style="margin: 5px 0; font-size: 15px; color: #333;"></p>
+                <p id="missing-cols-text" style="margin: 5px 0; font-size: 15px; color: #333;"></p>
+                <p style="font-size: 13px; color: #666; margin-top: 10px; border-top: 1px solid #ffeeba; padding-top: 10px;">
+                    <i data-lucide="info" style="width: 14px; height: 14px; vertical-align: middle;"></i> 
+                    نأمل فتح الملف، ومراجعة هذه الخانات وتعبئتها أو التأكد من سبب عدم تطابقها.
+                </p>
+            </div>
+
+            <button class="btn-process btn-secondary" onclick="window.location.reload()"><i data-lucide="refresh-cw"></i> العودة ورفع ملفات جديدة</button>
+        </div>   
  <div class="visitor-counter">
    <img id="visitCounterImage" src="https://visitor-badge.laobi.icu/badge?page_id=https%3A%2F%2Fmaf1250.github.io%2FRayatAuto%2F&left_color=%235c5856&right_color=%23548160&radius=9" alt="">
 </div>
          </div>
     <script>
+
+        
         lucide.createIcons();
         let timesData = [];
+                let globalFinalData = [];
+let globalUniqueData = [];
+let currentTab = 'all';
 
         function goToStep2() {
             if (!document.getElementById('ss01_file').files[0] || !document.getElementById('sl03_file').files[0] || !document.getElementById('timetables_file').files[0]) {
@@ -1030,9 +1146,135 @@ async function processFiles() {
                     }
                 });
 
+// حفظ البيانات في المتغيرات العامة
+                globalFinalData = finalData;
+                globalUniqueData = uniqueFinalData;
+
+                // الانتقال لصفحة النجاح وتوسيع الحاوية
+                document.getElementById('step2').classList.remove('active');
+                document.getElementById('step3').classList.add('active');
+                document.querySelector('.container').classList.add('wide');
+                
+                document.getElementById('final-count-text').innerText = `إجمالي المحاضرات المستخرجة: (${uniqueFinalData.length}) محاضرة`;
+                
+                // إظهار التحذيرات إن وجدت
+                if (missingCount > 0) {
+                    document.getElementById('warning-section').style.display = 'block';
+                    document.getElementById('missing-rows-text').innerText = `عدد الصفوف التي تحتوي على نقص: ${missingCount}`;
+                    document.getElementById('missing-cols-text').innerText = `الأعمدة الناقصة: ${Array.from(missingCols).join(" ، ")}`;
+                } else {
+                    document.getElementById('warning-section').style.display = 'none';
+                }
+
+           // عرض الجدول الافتراضي وإعادة تفعيل الأيقونات
+                switchTab('all');
+                lucide.createIcons();
+
+            } catch (error) {
+                console.error(error);
+                statusDiv.innerHTML = `<div class='error' style='background: #f8d7da; padding: 10px; border-radius: 5px; margin-top: 10px;'>حدث خطأ أثناء المعالجة: ${error.message}</div>`;
+                btn.disabled = false;
+                btn.innerHTML = `<i data-lucide="rocket"></i> استخراج الجدول النهائي`;
+                lucide.createIcons();
+            }
+        }
+        // دوال التحكم بالتبويبات وعرض الجدول
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            // تعديل شكل الأزرار
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+
+            const filterContainer = document.getElementById('filter-container');
+            const filterSelect = document.getElementById('data-filter');
+            filterSelect.innerHTML = '';
+
+            if (tab === 'all') {
+                filterContainer.style.display = 'none';
+                renderTable();
+            } else if (tab === 'trainer') {
+                filterContainer.style.display = 'block';
+                // جلب أسماء المدربين بدون تكرار
+                let trainers = [...new Set(globalFinalData.map(item => item["اسم المدرب"]).filter(Boolean))].sort();
+                filterSelect.innerHTML = '<option value="">-- اختر المدرب --</option>';
+                trainers.forEach(t => filterSelect.innerHTML += `<option value="${t}">${t}</option>`);
+                renderTable();
+            } else if (tab === 'section') {
+                filterContainer.style.display = 'block';
+                // جلب الشعب بدون تكرار
+                let sections = [...new Set(globalFinalData.map(item => item["الشعبة"]).filter(Boolean))].sort();
+                filterSelect.innerHTML = '<option value="">-- اختر الشعبة --</option>';
+                sections.forEach(s => filterSelect.innerHTML += `<option value="${s}">${s}</option>`);
+                renderTable();
+            }
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('result-tbody');
+            const filterValue = document.getElementById('data-filter').value;
+            tbody.innerHTML = '';
+
+            // نستخدم البيانات الشاملة (لأن الشيت الأول لا يحتوي على اسم المدرب والمقرر بل أرقام فقط)
+            let dataToShow = globalFinalData;
+
+            if (currentTab === 'trainer' && filterValue) {
+                dataToShow = dataToShow.filter(item => item["اسم المدرب"] === filterValue);
+            } else if (currentTab === 'section' && filterValue) {
+                dataToShow = dataToShow.filter(item => item["الشعبة"] === filterValue);
+            } else if (currentTab !== 'all') {
+                // إذا كان التبويب ليس الكل ولم يتم اختيار فلتر، لا تعرض شيء
+                dataToShow = []; 
+            }
+
+            if (dataToShow.length === 0 && currentTab !== 'all') {
+                tbody.innerHTML = '<tr><td colspan="7" style="padding: 20px; color: #666;">الرجاء الاختيار من القائمة أعلاه لعرض الجدول</td></tr>';
+                return;
+            }
+
+            dataToShow.forEach(row => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="font-weight: bold; color: #008e7e;">${row["الرقم المرجعي"] || '-'}</td>
+                        <td>${row["اسم المقرر"] || '-'}</td>
+                        <td>${row["الشعبة"] || '-'}</td>
+                        <td>${row["اليوم"] || '-'}</td>
+                        <td dir="ltr">${row["الوقت"] || '-'}</td>
+                        <td>${row["القاعة"] || '-'}</td>
+                        <td>${row["اسم المدرب"] || '-'}</td>
+                    </tr>
+                `;
+            });
+        }
+
+       // دالة النسخ لرايات أوتو
+        function copyToRayatAuto() {
+            if (globalUniqueData.length === 0) {
+                alert("لا توجد بيانات لنسخها!");
+                return;
+            }
+
+            // الأعمدة المطلوبة بالضبط لرايات أوتو
+            const columns = ["الفصل التدريبي", "الرقم المرجعي", "اليوم", "الوقت", "المبنى", "القاعة", "رقم المدرب"];
+            
+            let textToCopy = "";
+            globalUniqueData.forEach(row => {
+                let rowData = columns.map(col => row[col] || "");
+                textToCopy += rowData.join("\t") + "\n";
+            });
+
+            navigator.clipboard.writeText(textToCopy.trim()).then(() => {
+                alert("✅ تم نسخ البيانات بنجاح!\nيمكنك الآن لصقها مباشرة في أداة رايات أوتو.");
+            }).catch(err => {
+                alert("حدث خطأ أثناء النسخ: " + err);
+            });
+        }
+
+        // دالة تحميل ملف الإكسل (نفس الكود السابق وضعناه في دالة منفصلة)
+        async function downloadExcel() {
+            try {
                 const workbook = new ExcelJS.Workbook();
                 
-                // الشيت الأول (الأساسي) - الجدول النهائي (بدون تكرار)
                 const worksheet1 = workbook.addWorksheet("الجدول النهائي", { views: [{ rightToLeft: true, activeCell: 'A1' }] });
                 worksheet1.columns = [
                     { header: "الفصل التدريبي", key: "الفصل التدريبي", width: 13 },
@@ -1043,12 +1285,10 @@ async function processFiles() {
                     { header: "القاعة", key: "القاعة", width: 15 },
                     { header: "رقم المدرب", key: "رقم المدرب", width: 12 }
                 ];
-                // إضافة البيانات المفلترة (بدون تكرار)
-                worksheet1.addRows(uniqueFinalData);
+                worksheet1.addRows(globalUniqueData);
                 worksheet1.getRow(1).font = { bold: true };
                 worksheet1.getRow(1).alignment = { horizontal: 'center' };
 
-                // الشيت الثاني - كامل البيانات (مع التكرار إن وجد)
                 const worksheet2 = workbook.addWorksheet("كامل البيانات", { views: [{ rightToLeft: true }] });
                 worksheet2.columns = [
                     { header: "الفصل التدريبي", key: "الفصل التدريبي", width: 13 },
@@ -1064,12 +1304,10 @@ async function processFiles() {
                     { header: "الشعبة", key: "الشعبة", width: 10 },
                     { header: "نوع المحاضرة", key: "نوع المحاضرة", width: 15 }
                 ];
-                // إضافة كامل البيانات
-                worksheet2.addRows(finalData);
+                worksheet2.addRows(globalFinalData);
                 worksheet2.getRow(1).font = { bold: true };
                 worksheet2.getRow(1).alignment = { horizontal: 'center' };
                 
-                // استخراج وتحميل الملف
                 const buffer = await workbook.xlsx.writeBuffer();
                 const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
                 const link = document.createElement('a');
@@ -1078,28 +1316,8 @@ async function processFiles() {
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-
-                // الانتقال لصفحة النجاح (الخطوة 3)
-                document.getElementById('step2').classList.remove('active');
-                document.getElementById('step3').classList.add('active');
-                
-                document.getElementById('final-count-text').innerText = `تم استخراج عدد (${finalData.length}) صف بنجاح.`;
-                
-                // إظهار التحذيرات إن وجدت
-                if (missingCount > 0) {
-                    document.getElementById('warning-section').style.display = 'block';
-                    document.getElementById('missing-rows-text').innerText = `عدد الصفوف التي تحتوي على نقص: ${missingCount}`;
-                    document.getElementById('missing-cols-text').innerText = `الأعمدة الناقصة: ${Array.from(missingCols).join(" ، ")}`;
-                } else {
-                    document.getElementById('warning-section').style.display = 'none';
-                }
-
-            } catch (error) {
-                console.error(error);
-                statusDiv.innerHTML = `<div class='error' style='background: #f8d7da; padding: 10px; border-radius: 5px; margin-top: 10px;'>حدث خطأ أثناء المعالجة: ${error.message}</div>`;
-                btn.disabled = false;
-                btn.innerHTML = `<i data-lucide="rocket"></i> استخراج الجدول النهائي`;
-                lucide.createIcons();
+            } catch (err) {
+                alert("حدث خطأ أثناء تحميل الملف: " + err);
             }
         }
     </script>
