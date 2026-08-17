@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>أداة دمج جداول المحاضرات الذكية</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        * {
+            font-family: 'Cairo', sans-serif;
+        }
+        body {
+            background-color: #f4f9f8;
+            color: #333;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            max-width: 650px;
+            width: 100%;
+            position: relative;
+        }
+
+        .youtube-btn {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            width: 50px;
+            height: 50px;
+            background: #FF0000;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-decoration: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,.2);
+            transition: all .25s ease;
+        }
+
+        .youtube-btn:hover { transform: scale(1.1); background: #cc0000; }
+        
+        h1 {
+            text-align: center;
+            color: #008e7e;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .step-title {
+            text-align: center;
+            color: #008e7e;
+            font-size: 18px;
+            margin-bottom: 20px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .step {
+            display: none;
+            animation: fadeIn 0.4s ease-in-out;
+        }
+        .step.active { display: block; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .upload-group {
+            margin-bottom: 20px;
+            background: #fafdfa;
+            border: 2px dashed #8dc63f;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: right;
+        }
+        .upload-group label {
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #008e7e;
+            gap: 8px;
+        }
+        
+        input[type="file"] {
+            display: block;
+            width: 100%;
+            font-family: inherit;
+        }
+
+        .settings-group {
+            background: #eef7f6;
+            border: 1px solid #cbe6e3;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .settings-group h3 {
+            margin-top: 0;
+            color: #006d60;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .settings-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 15px;
+            justify-content: center;
+        }
+        .settings-row div { flex: 1; min-width: 140px; display: flex; flex-direction: column; align-items: center; }
+        .settings-row label { font-weight: 600; margin-bottom: 8px; font-size: 12px; color: #006d60; }
+        .settings-row input { width: 85px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; text-align: center; }
+        .settings-row input:focus { outline: none; border-color: #008e7e; }
+
+        .times-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: center;
+            background: #fff;
+            margin-bottom: 10px;
+        }
+        .times-table th, .times-table td { border: 1px solid #ccc; padding: 6px; font-size: 13px; }
+        .times-table th { background: #cbe6e3; color: #006d60; }
+        
+        .time-input,
+        input[type="number"],
+        .times-table td strong {
+            font-family: Arial, Helvetica, sans-serif;
+            text-align: center;
+        }
+
+        .times-table input[type="number"] {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 60px;
+            background: transparent;
+            font-size: 14px;
+            padding: 4px;
+        }
+
+          .time-box {
+            display: inline-flex;
+            flex-direction: row; 
+            align-items: center;
+            gap: 5px;
+            direction: ltr;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 3px 9px;
+            background: #fff;
+        }
+        .time-box:focus-within { border-color: #008e7e; }
+        .time-box .time-input {
+            border: none;
+            outline: none;
+            background: transparent;
+            width: 50px;
+            padding: 0;
+            font-size: 14px;
+            direction: ltr;
+        }
+
+        .settings-row .time-box {
+            display: inline-flex;
+            flex-direction: row;
+            min-width: 0;
+            flex: 0 0 auto;
+        }
+
+        .time-box .stepper {
+            display: inline-flex;
+            flex-direction: column;
+            line-height: 1;
+            margin-inline-start: 1px;
+        }
+        .time-box .stepper button {
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            padding: 0 2px;
+            font-size: 8px;
+            line-height: 9px;
+            color: #6c757d;
+        }
+        .time-box .stepper button:hover { color: #008e7e; }
+
+        input[type="number"] { direction: ltr; }
+        
+        .btn-process {
+            background-color: #008e7e;
+            color: #fff;
+            border: none;
+            padding: 15px 20px;
+            width: 100%;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-process:hover { background-color: #006d60; }
+        .btn-secondary { background-color: #6c757d; }
+        .btn-secondary:hover { background-color: #5a6268; }
+
+        .btn-reset { 
+            background-color: #8dc63f;
+            color: #1a3300; 
+            width: auto; 
+            padding: 8px 15px; 
+            margin-bottom:15px; 
+            font-size:13px; 
+            display: flex; 
+            align-items: center;
+            gap: 6px;
+            margin: 0 auto 15px;
+            font-family: 'Cairo', sans-serif;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+        .btn-reset:hover { background-color: #7ab32e; }
+
+        .checkbox-group {
+            margin-top: 15px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #006d60;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .status-msg { text-align: center; margin-top: 15px; font-weight: 600; }
+        .error { color: #dc3545; }
+
+        .result-card {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .result-success-icon { color: #008e7e; margin-bottom: 10px; }
+        .result-info { font-size: 18px; margin: 10px 0; color: #333; font-weight: bold; }
+        
+        .warning-box {
+            background-color: #fff8c4;
+            border-right: 5px solid #ffc107;
+            padding: 15px;
+            text-align: right;
+            border-radius: 4px;
+            margin-top: 20px;
+            border: 1px solid #ffeeba;
+        }
+        .warning-title { color: #d39e00; font-weight: 800; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+
+        .lucide-spin { animation: spin 1.5s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+         .visitor-counter {
+            margin-top: 35px;
+            padding-top: 15px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <a href="https://youtu.be/CaZTUCzXPnY" target="_blank" class="youtube-btn" title="لمشاهدة الشرح">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="white">
+                <path d="M23.5 6.2c-.3-1.2-1.2-2.1-2.4-2.4C19 3.2 12 3.2 12 3.2s-7 0-9.1.6C1.7 4.1.8 5 .5 6.2 0 8.3 0 12 0 12s0 3.7.5 5.8c.3 1.2 1.2 2.1 2.4 2.4C5 20.8 12 20.8 12 20.8s7 0 9.1-.6c1.2-.3 2.1-1.2 2.4-2.4.5-2.1.5-5.8.5-5.8s0-3.7-.5-5.8zM9.6 15.5V8.5L15.8 12l-6.2 3.5z"/>
+            </svg>
+        </a>
+
+        <h1>أداة دمج جداول المحاضرات</h1> 
+        
+        <!-- الخطوة 1 -->
+        <div id="step1" class="step active">
+            <h2 class="step-title"><i data-lucide="folder-open"></i> الخطوة 1: رفع الملفات الأساسية</h2>
+            <div class="upload-group">
+                <label for="ss01_file"><i data-lucide="file-spreadsheet"></i> 1. تقرير جداول الوحدة التدريبية طولي (SS01)</label>
+                <input type="file" id="ss01_file" accept=".csv">
+            </div>
+            <div class="upload-group">
+                <label for="sl03_file"><i data-lucide="graduation-cap"></i> 2. تقرير أعضاء هيئة التدريب (SL03)</label>
+                <input type="file" id="sl03_file" accept=".csv">
+            </div>
+            <div class="upload-group">
+                <label for="timetables_file"><i data-lucide="calendar-days"></i> 3. ملف الجدول المستخرج من (aSc Timetables)</label>
+                <input type="file" id="timetables_file" accept=".xml">
+            </div>
+            <button class="btn-process" onclick="goToStep2()">التالي: إعداد أوقات المحاضرات <i data-lucide="arrow-left"></i></button>
+            <div id="step1-status" class="status-msg"></div>
+        </div>
+
+        <!-- الخطوة 2 -->
+        <div id="step2" class="step">
+            <h2 class="step-title"><i data-lucide="clock"></i> الخطوة 2: إعداد أوقات المحاضرات</h2>
+            <div class="settings-group">
+                <h3>الإعدادات الافتراضية (لتعبئة الجدول سريعاً)</h3>
+                <div class="settings-row">
+                    <div><label>وقت بدء المحاضرة الأولى:</label><div class="time-box"><input type="text" class="time-input" id="startTime" value="08:00" inputmode="numeric" pattern="[0-9]{2}:[0-9]{2}" maxlength="5" placeholder="HH:MM" onchange="generateTimes()"><span class="stepper"><button type="button" tabindex="-1" onclick="bumpTime('startTime',5)">&#9650;</button><button type="button" tabindex="-1" onclick="bumpTime('startTime',-5)">&#9660;</button></span></div></div>
+                    <div><label>مدة المحاضرة (دقيقة):</label><input type="number" id="duration" value="50" lang="en" onchange="generateTimes()"></div>
+                    <div><label>الاستراحة (بعد 2 ، 4 ، 6 ، 8):</label><input type="number" id="defaultBreakTime" value="5" min="0" lang="en" onchange="generateTimes()"></div>
+                </div>
+                
+                <button class="btn-reset" onclick="generateTimes()">
+                    <i data-lucide="rotate-ccw"></i>إعادة ضبط الأوقات
+                </button>
+
+                <table class="times-table">
+                    <thead><tr><th>المحاضرة</th><th>وقت البدء</th><th>وقت الانتهاء</th><th>الاستراحة (بعد المحاضرة)</th></tr></thead>
+                    <tbody id="timesBody"></tbody>
+                </table>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="adjustEvenPeriods" checked>
+                    <label for="adjustEvenPeriods" title="إضافة دقيقة لتفادي التعارض" style="cursor: help; border-bottom: 1px dashed #006d60;">
+                        إضافة دقيقة للمحاضرات الفردية (تفادياً للتعارض)
+                    </label>
+                </div>
+            </div>
+            <div class="btn-group" style="display: flex; gap: 10px;">
+                <button class="btn-process btn-secondary" onclick="goToStep1()"><i data-lucide="arrow-right"></i> السابق</button>
+                <button class="btn-process" id="processBtn" onclick="processFiles()"><i data-lucide="rocket"></i> استخراج الجدول النهائي</button>
+            </div>
+            <div id="step2-status" class="status-msg"></div>
+        </div>
+
+        <!-- الخطوة 3: صفحة النتائج -->
+        <div id="step3" class="step">
+            <div class="result-card">
+                <div class="result-success-icon">
+                    <i data-lucide="check-circle-2" style="width: 60px; height: 60px;"></i>
+                </div>
+                <h2 style="color: #008e7e; margin-top: 0;">تمت معالجة الجدول واستخراجه بنجاح!</h2>
+                <p class="result-info" id="final-count-text"></p>
+                <p style="color: #008e7e">في حال عدم تثبيت إضافة رايات أوتو، يمكن تثبيتها من خلال زيارة الرابط:</p>
+                <a href="https://myalsh2030.github.io/rayatauto"
+                   target="_blank"
+                   style="color: #008e7e;">
+                   https://myalsh2030.github.io/rayatauto
+                </a>                               
+                <div id="warning-section" class="warning-box" style="display:none;">
+                    <div class="warning-title"><i data-lucide="alert-triangle"></i> تنبيه هام:</div>
+                    <p id="missing-rows-text" style="margin: 5px 0; font-size: 15px; color: #333;"></p>
+                    <p id="missing-cols-text" style="margin: 5px 0; font-size: 15px; color: #333;"></p>
+                    <p style="font-size: 13px; color: #666; margin-top: 10px; border-top: 1px solid #ffeeba; padding-top: 10px;">
+                        <i data-lucide="info" style="width: 14px; height: 14px; vertical-align: middle;"></i> 
+                        نأمل فتح الملف، ومراجعة هذه الخانات وتعبئتها أو التأكد من سبب عدم تطابقها.
+                    </p>
+                </div>
+            </div>
+            <button class="btn-process" onclick="window.location.reload()"><i data-lucide="refresh-cw"></i> معالجة ملفات جديدة</button>
+        </div>
+   
+ <div class="visitor-counter">
+   <img id="visitCounterImage" src="https://visitor-badge.laobi.icu/badge?page_id=https%3A%2F%2Fmaf1250.github.io%2FRayatAuto%2F&left_color=%235c5856&right_color=%23548160&radius=9" alt="">
+</div>
+         </div>
+    <script>
+        lucide.createIcons();
+        let timesData = [];
+
+        function goToStep2() {
+            if (!document.getElementById('ss01_file').files[0] || !document.getElementById('sl03_file').files[0] || !document.getElementById('timetables_file').files[0]) {
+                document.getElementById('step1-status').innerHTML = "<span class='error'>نأمل رفع جميع الملفات أولاً للإنتقال للخطوة التالية!</span>";
+                return;
+            }
+            document.getElementById('step1-status').innerHTML = "";
+            document.getElementById('step1').classList.remove('active');
+            document.getElementById('step2').classList.add('active');
+            if(timesData.length === 0) generateTimes();
+        }
+
+        function goToStep1() {
+            document.getElementById('step2').classList.remove('active');
+            document.getElementById('step1').classList.add('active');
+        }
+
+        function timeToMinutes(timeStr) {
+            if(!timeStr) return 0;
+            let [h, m] = timeStr.split(':').map(Number);
+            return (isNaN(h) ? 0 : h) * 60 + (isNaN(m) ? 0 : m);
+        }
+
+        function minutesToTime(mins) {
+            let h = Math.floor(mins / 60) % 24;
+            let m = mins % 60;
+            return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+        }
+
+        // زيادة/إنقاص الوقت بمقدار delta دقيقة عبر الأسهم (يلتفّ عند منتصف الليل)
+        function bumpTime(id, delta) {
+            let inp = document.getElementById(id);
+            if (!inp) return;
+            let mins = timeToMinutes(inp.value) + delta;
+            mins = ((mins % 1440) + 1440) % 1440;
+            inp.value = minutesToTime(mins);
+            inp.dispatchEvent(new Event('change')); 
+        }
+
+        function generateTimes() {
+            let startStr = document.getElementById('startTime').value || "08:00";
+            let durationVal = parseInt(document.getElementById('duration').value);
+            let duration = isNaN(durationVal) ? 50 : durationVal;
+            let breakVal = parseInt(document.getElementById('defaultBreakTime').value);
+            let defaultBreak = isNaN(breakVal) ? 5 : breakVal;
+            
+            let currentMins = timeToMinutes(startStr);
+            timesData = [];
+            
+            for (let i = 1; i <= 10; i++) {
+                let breakAfter = 0;
+                if (i === 10) { breakAfter = 0; }
+                else if (i % 2 !== 0) { breakAfter = 0; }
+                else { breakAfter = defaultBreak; }
+                
+                timesData.push({ period: i, startMins: currentMins, endMins: currentMins + duration, breakAfter: breakAfter });
+                currentMins = currentMins + duration + breakAfter;
+            }
+            renderTable();
+        }
+
+        function renderTable() {
+            let tbody = document.getElementById('timesBody');
+            tbody.innerHTML = '';
+            timesData.forEach((data, index) => {
+                let breakInputHtml = index < 9 ? 
+                    `<input type="number" min="0" value="${data.breakAfter}" lang="en" onchange="updateBreak(${index}, this.value)">` : '-';
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${data.period}</strong></td>
+                        <td><div class="time-box"><input type="text" class="time-input" id="start_${data.period}" value="${minutesToTime(data.startMins)}" inputmode="numeric" pattern="[0-9]{2}:[0-9]{2}" maxlength="5" onchange="updateStart(${index}, this.value)"><span class="stepper"><button type="button" tabindex="-1" onclick="bumpTime('start_${data.period}',5)">&#9650;</button><button type="button" tabindex="-1" onclick="bumpTime('start_${data.period}',-5)">&#9660;</button></span></div></td>
+                        <td><div class="time-box"><input type="text" class="time-input" id="end_${data.period}" value="${minutesToTime(data.endMins)}" inputmode="numeric" pattern="[0-9]{2}:[0-9]{2}" maxlength="5" onchange="updateEnd(${index}, this.value)"></div></td>
+                        <td>${breakInputHtml}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function updateBreak(index, newBreakVal) {
+            let breakMins = parseInt(newBreakVal);
+            if (isNaN(breakMins)) breakMins = 0;
+            timesData[index].breakAfter = breakMins;
+            recalculateFrom(index + 1);
+        }
+
+        function updateStart(index, newStartStr) {
+            let startMins = timeToMinutes(newStartStr);
+            let duration = timesData[index].endMins - timesData[index].startMins; 
+            timesData[index].startMins = startMins;
+            timesData[index].endMins = startMins + duration;
+            recalculateFrom(index + 1);
+        }
+
+        function updateEnd(index, newEndStr) {
+            let endMins = timeToMinutes(newEndStr);
+            timesData[index].endMins = endMins;
+            recalculateFrom(index + 1);
+        }
+
+        function recalculateFrom(startIndex) {
+            for (let i = startIndex; i < timesData.length; i++) {
+                let prev = timesData[i - 1];
+                let duration = timesData[i].endMins - timesData[i].startMins;
+                timesData[i].startMins = prev.endMins + prev.breakAfter;
+                timesData[i].endMins = timesData[i].startMins + duration;
+            }
+            renderTable();
+        }
+
+        function readFileAsync(file) {
+            return new Promise((resolve, reject) => {
+                let reader = new FileReader();
+                let isCSV = file.name.toLowerCase().endsWith('.csv');
+
+                reader.onload = function(e) {
+                    try {
+                        let workbook;
+                        if (isCSV) {
+                            workbook = XLSX.read(e.target.result, {type: 'string'});
+                        } else {
+                            let data = new Uint8Array(e.target.result);
+                            workbook = XLSX.read(data, {type: 'array'});
+                        }
+                        let firstSheetName = workbook.SheetNames[0];
+                        let worksheet = workbook.Sheets[firstSheetName];
+                        let json = XLSX.utils.sheet_to_json(worksheet, {defval: ""});
+                        let cleanedJson = json.map(row => {
+                            let newRow = {};
+                            for (let key in row) { newRow[key.toString().trim()] = row[key]; }
+                            return newRow;
+                        });
+                        resolve(cleanedJson);
+                    } catch (err) { reject(err); }
+                };
+                reader.onerror = reject;
+
+                if (isCSV) reader.readAsText(file, 'windows-1256');
+                else reader.readAsArrayBuffer(file);
+            });
+        }
+
+function normalizeArabicName(name) {
+            if (!name) return "";
+            return name.replace(/[أإآ]/g, 'ا')
+                       .replace(/ة/g, 'ه')
+                       .replace(/ى/g, 'ي')
+                       .replace(/عبد\s+/g, 'عبد') // دمج "عبد الله" لتصبح "عبدالله"
+                       .replace(/\s+/g, ' ')
+                       .trim();
+        }
+
+function isNameMatch(name1, name2) {
+            if (!name1 || !name2) return false;
+            let n1 = normalizeArabicName(name1);
+            let n2 = normalizeArabicName(name2);
+            if (n1 === n2) return true;
+            let parts1 = n1.split(' ');
+            let parts2 = n2.split(' ');
+            let [shorter, longer] = parts1.length < parts2.length ? [parts1, parts2] : [parts2, parts1];
+            let allMatch = true;
+            for (let i = 0; i < shorter.length; i++) {
+                if (!longer.includes(shorter[i])) {
+                    allMatch = false;
+                    break;
+                }
+            }
+            if (allMatch) return true;
+            let longerStripped = longer.map(w => w.replace(/^ال/, ''));
+            let allMatchStripped = true;
+            for (let i = 0; i < shorter.length; i++) {
+                let shortWord = shorter[i].replace(/^ال/, '');
+                if (!longerStripped.includes(shortWord)) {
+                    allMatchStripped = false;
+                    break;
+                }
+            }
+            
+            return allMatchStripped;
+        }
+
+function extractCourseBase(str) {
+    if (!str) return "";
+    let cleaned = str.toString()
+        .replace(/\(ع\)/g, '')
+        .replace(/(^|\s)ع(?=\s|$)/g, ' ')
+        .replace(/عملي/g, '')
+        .replace(/نظري/g, '');
+        
+    let lettersMatch = cleaned.match(/[a-zA-Z\u0621-\u064A]+/g);
+    let letters = lettersMatch ? lettersMatch.join('') : '';
+    let numbersMatch = cleaned.match(/[0-9\u0660-\u0669]+/g);
+    let numbers = numbersMatch ? numbersMatch.join('') : '';
+    return letters + numbers; 
+}
+        
+function isPractical(courseName, courseCode) {
+            let name = String(courseName || "").trim();
+            let code = String(courseCode || "").trim();
+            if (name.includes('(ع)') || name.includes('عملي') || name.endsWith(' ع') || name.includes('ورشة') || name.includes('رسم')) return true;
+            if (code.includes('(ع)') || code.includes('عملي') || code.endsWith(' ع') || code.includes(' ع ')) return true;
+            return false;
+        }
+async function processFiles() {
+            let btn = document.getElementById('processBtn');
+            let statusDiv = document.getElementById('step2-status');
+            
+            try {
+                btn.disabled = true;
+                btn.innerHTML = `<i data-lucide="loader-2" class="lucide-spin"></i> جارٍ المعالجة واستخراج الجدول...`;
+                lucide.createIcons();
+                statusDiv.innerHTML = "";
+
+                let ss01Data = await readFileAsync(document.getElementById('ss01_file').files[0]);
+                let timetablesData = await readFileAsync(document.getElementById('timetables_file').files[0]);
+                let sl03Data = await readFileAsync(document.getElementById('sl03_file').files[0]);
+
+                let periods = {};
+                for(let i=1; i<=10; i++){
+                    periods[i] = {
+                        startRaw: document.getElementById(`start_${i}`).value,
+                        endRaw: document.getElementById(`end_${i}`).value
+                    };
+                }
+
+                let rawLectures = [];
+                timetablesData.forEach(row => {
+                    let term = String(row['SchoolDBN'] || row['الفصل'] || "").trim();
+                    let courseCode = String(row['CourseCode'] || row['رمز المقرر'] || "").trim();
+                    let section = String(row['SectionID'] || row['الشعبة'] || "").trim();
+                    let courseName = String(row['Course name'] || row['المقرر'] || "").trim();
+                    let periodId = parseInt(row['PeriodID'] || row['المحاضرة']);
+                    let cycleDay = String(row['Cycle Day'] || row['اليوم'] || "").trim();
+                    let teacher = String(row['Teacher Name'] || row['المدرب'] || "").trim();
+                    let room = String(row['Room'] || row['القاعة'] || "").trim();
+                    
+                    if (!section && !courseName) return; 
+                    if (!periodId || periodId < 1 || periodId > 10) return;
+
+                    if (/^\d+$/.test(cycleDay)) cycleDay = cycleDay.padStart(5, '0');
+                    
+                    let days = [];
+                    if (cycleDay[0] === '1') days.push({name: 'الأحد', order: 1});
+                    if (cycleDay[1] === '1') days.push({name: 'الإثنين', order: 2});
+                    if (cycleDay[2] === '1') days.push({name: 'الثلاثاء', order: 3});
+                    if (cycleDay[3] === '1') days.push({name: 'الأربعاء', order: 4});
+                    if (cycleDay[4] === '1') days.push({name: 'الخميس', order: 5});
+                    
+                    days.forEach(d => {
+                        rawLectures.push({
+                            term, courseCode, section, courseName,
+                            periodId, dayName: d.name, dayOrder: d.order,
+                            teacher, room, startP: periodId, endP: periodId
+                        });
+                    });
+                });
+
+                rawLectures.sort((a, b) => {
+                    if (a.section !== b.section) return a.section.localeCompare(b.section);
+                    if (a.dayOrder !== b.dayOrder) return a.dayOrder - b.dayOrder;
+                    if (a.courseName !== b.courseName) return a.courseName.localeCompare(b.courseName);
+                    if (a.teacher !== b.teacher) return a.teacher.localeCompare(b.teacher);
+                    return a.startP - b.startP;
+                });
+
+                let mergedLectures = [];
+                for (let i = 0; i < rawLectures.length; i++) {
+                    let current = rawLectures[i];
+                    if (mergedLectures.length > 0) {
+                        let last = mergedLectures[mergedLectures.length - 1];
+                        if (last.section === current.section && 
+                            last.dayOrder === current.dayOrder &&
+                            last.courseName === current.courseName &&
+                            last.teacher === current.teacher) {
+                            
+                            let lastEndMins = timeToMinutes(periods[last.endP]?.endRaw);
+                            let currStartMins = timeToMinutes(periods[current.startP]?.startRaw);
+                            if (currStartMins !== undefined && lastEndMins !== undefined) {
+                                let diff = currStartMins - lastEndMins;
+                                if (diff <= 65 && diff >= 0) {
+                                    last.endP = current.endP; 
+                                    if (!last.room && current.room) last.room = current.room;
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+                    mergedLectures.push({...current});
+                }
+
+                mergedLectures.sort((a, b) => {
+                    if (a.section !== b.section) return a.section.localeCompare(b.section);
+                    if (a.dayOrder !== b.dayOrder) return a.dayOrder - b.dayOrder;
+                    return a.startP - b.startP;
+                });
+
+          let adjustEven = document.getElementById('adjustEvenPeriods').checked;
+                let baseDuration = parseInt(document.getElementById('duration').value) || 50; // جلب مدة المحاضرة من الإعدادات
+
+                mergedLectures.forEach(lec => {
+                    let pStart = lec.startP;
+                    let pEnd = lec.endP;
+                    let tStart = periods[pStart]?.startRaw || "";
+                    let tEnd = periods[pEnd]?.endRaw || "";
+                    
+                    // --- 1. حل مشكلة المحاضرات المدمجة (تجاهل الاستراحات بداخلها) ---
+                    if (pEnd > pStart && tStart) {
+                        let numPeriods = (pEnd - pStart) + 1; // عدد المحاضرات المتصلة
+                        let correctEndMins = timeToMinutes(tStart) + (numPeriods * baseDuration); // الوقت الصافي
+                        tEnd = minutesToTime(correctEndMins); // تحديث وقت النهاية
+                    }
+                    // ----------------------------------------------------------------
+
+                    // --- 2. كود إضافة الدقيقة للمحاضرات الزوجية ---
+                    if (adjustEven && tStart && tEnd) {
+                        if (pStart % 2 === 0) { tStart = minutesToTime(timeToMinutes(tStart) + 1); }
+                        if (pStart === pEnd && pStart % 2 === 0) { tEnd = minutesToTime(timeToMinutes(tEnd) + 1); }
+                    }
+                    // ----------------------------------------------------------------
+                    
+                    // إزالة النقطتين الرأسيتين من الوقت
+                    if (tStart) tStart = tStart.replace(':', '');
+                    if (tEnd) tEnd = tEnd.replace(':', '');
+                    
+                    lec.timeStr = `${tStart} - ${tEnd}`;
+                });    
+// --- الخطوة الأولى: تحديد نوع المحاضرة (نظري/عملي) لكل صف وإنشاء مفتاح الشعبة ---
+                mergedLectures.forEach(row => {
+                    let rCourseName = row.courseName;
+                    let rCourseCode = row.courseCode;
+                    let rBase = extractCourseBase(rCourseCode) || extractCourseBase(rCourseName);
+                    let isPracHint = isPractical(rCourseName, rCourseCode);
+
+                    let hasTheoryInSS01 = false;
+                    let hasPracInSS01 = false;
+                    ss01Data.forEach(sRow => {
+                        let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
+                        if (sBase === rBase) {
+                            let sType = String(sRow['نوع الجدولة'] || sRow['نوع الشعبة'] || "").trim();
+                            if (sType.includes('عملي')) hasPracInSS01 = true;
+                            if (sType.includes('نظري')) hasTheoryInSS01 = true;
+                        }
+                    });
+
+                    let isTwoPartCourse = hasTheoryInSS01 && hasPracInSS01;
+                    if (hasPracInSS01 && !hasTheoryInSS01) {
+                        isPracHint = true;
+                    } else if (hasTheoryInSS01 && !hasPracInSS01) {
+                        isPracHint = false;
+                    }
+
+                    row.finalLectureType = isPracHint ? 'عملي' : 'نظري';
+                    row.rBase = rBase;
+                    row.isTwoPartCourse = isTwoPartCourse;
+                    // مفتاح الشعبة: يجمع بين المقرر، النوع، واسم الشعبة، والمدرب (لضمان فصل الأرقام المرجعية عند اختلاف المدربين لنفس الشعبة)
+                    row.csKey = rBase + "|" + row.finalLectureType + "|" + row.section + "|" + row.teacher;
+                });
+
+                // --- الخطوة الثانية: اكتشاف الشعب المدمجة وربطها معاً ---
+                let timeGroups = {};
+                mergedLectures.forEach(row => {
+                    // إذا اشتركت شعبتين في نفس اليوم، الوقت، المدرب، المقرر، والنوع.. فهما مدمجتان
+                    let timeKey = row.dayName + "|" + row.timeStr + "|" + row.teacher + "|" + row.rBase + "|" + row.finalLectureType;
+                    if (!timeGroups[timeKey]) timeGroups[timeKey] = new Set();
+                    timeGroups[timeKey].add(row.csKey);
+                });
+
+                let mergeSets = [];
+                for (let key in timeGroups) {
+                    let currentSet = Array.from(timeGroups[key]);
+                    if (currentSet.length === 0) continue;
+
+                    let intersectingIndices = [];
+                    for (let i = 0; i < mergeSets.length; i++) {
+                        if (currentSet.some(cs => mergeSets[i].has(cs))) {
+                            intersectingIndices.push(i);
+                        }
+                    }
+
+                    if (intersectingIndices.length === 0) {
+                        mergeSets.push(new Set(currentSet));
+                    } else {
+                        let firstIdx = intersectingIndices[0];
+                        currentSet.forEach(cs => mergeSets[firstIdx].add(cs));
+                        for (let i = 1; i < intersectingIndices.length; i++) {
+                            mergeSets[intersectingIndices[i]].forEach(cs => mergeSets[firstIdx].add(cs));
+                            mergeSets[intersectingIndices[i]] = null;
+                        }
+                        mergeSets = mergeSets.filter(s => s !== null);
+                    }
+                }
+                // التأكد من أن كل شعبة موجودة في مجموعة (حتى لو كانت مجموعة من شعبة واحدة غير مدمجة)
+                mergedLectures.forEach(row => {
+                    let found = mergeSets.some(s => s.has(row.csKey));
+                    if (!found) {
+                        mergeSets.push(new Set([row.csKey]));
+                    }
+                });
+
+           // دالة مساعدة لتوحيد صيغة الوقت للمطابقة (ترتب الأوقات وتزيل المسافات)
+                function getNormalizedTime(timeStr) {
+                    if (!timeStr) return "";
+                    let parts = String(timeStr).match(/\d{3,4}/g);
+                    if (!parts) return "";
+                    return parts.map(p => p.padStart(4, '0')).sort().join('');
+                }
+
+                // --- الخطوة الثالثة: سحب رقم مرجعي واحد (CRN) لكل مجموعة شعب ---
+                let csKeyToCRN = {};
+                let usedCRNs = new Set(); // استخدام Set لمنع تكرار الرقم المرجعي لشعب مختلفة
+
+                mergeSets.forEach(mSet => {
+                    let repCsKey = Array.from(mSet)[0];
+                    let repLectures = mergedLectures.filter(r => r.csKey === repCsKey);
+                    if (repLectures.length === 0) return;
+
+                    let repLecture = repLectures[0];
+                    let rBase = repLecture.rBase;
+                    let finalLectureType = repLecture.finalLectureType;
+                    let rTrainer = repLecture.teacher;
+                    let isTwoPartCourse = repLecture.isTwoPartCourse;
+                    let isPracHint = finalLectureType === 'عملي';
+
+                    // استخراج (اليوم + الوقت) لجميع محاضرات هذه الشعبة للمطابقة الدقيقة
+                    let repDayTimes = repLectures.map(r => r.dayName + "|" + getNormalizedTime(r.timeStr));
+                    let repDays = repLectures.map(r => r.dayName);
+
+                    let bestMatchIndex = -1;
+
+                    // المحاولة 1: مطابقة الرمز + النوع + المدرب + (اليوم والوقت) - تطابق مثالي
+                    bestMatchIndex = ss01Data.findIndex((sRow) => {
+                        let crn = sRow['الرقم المرجعي'] || sRow['CRN'] || "";
+                        if (crn && usedCRNs.has(crn)) return false;
+
+                        let sTrainer = String(sRow['اسم المدرب'] || sRow['المدرب'] || "").trim();
+                        let sType = String(sRow['نوع الجدولة'] || sRow['نوع الشعبة'] || "").trim();
+                        let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
+                        let sDay = String(sRow['اليوم'] || "").trim();
+                        let sTime = getNormalizedTime(sRow['الوقت']);
+                        let sDayTime = sDay + "|" + sTime;
+
+                        if (sBase !== rBase) return false;
+                        let typeMatch = (!sType) || (isPracHint && sType.includes('عملي')) || (!isPracHint && sType.includes('نظري'));
+                        if (!typeMatch) return false;
+
+                        return isNameMatch(sTrainer, rTrainer) && repDayTimes.includes(sDayTime);
+                    });
+
+                    // المحاولة 2: مطابقة الرمز + النوع + المدرب + اليوم (تجاهل الوقت في حال وجود اختلاف بسيط)
+                    if (bestMatchIndex === -1) {
+                        bestMatchIndex = ss01Data.findIndex((sRow) => {
+                            let crn = sRow['الرقم المرجعي'] || sRow['CRN'] || "";
+                            if (crn && usedCRNs.has(crn)) return false;
+
+                            let sTrainer = String(sRow['اسم المدرب'] || sRow['المدرب'] || "").trim();
+                            let sType = String(sRow['نوع الجدولة'] || sRow['نوع الشعبة'] || "").trim();
+                            let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
+                            let sDay = String(sRow['اليوم'] || "").trim();
+
+                            if (sBase !== rBase) return false;
+                            let typeMatch = (!sType) || (isPracHint && sType.includes('عملي')) || (!isPracHint && sType.includes('نظري'));
+                            if (!typeMatch) return false;
+
+                            return isNameMatch(sTrainer, rTrainer) && repDays.includes(sDay);
+                        });
+                    }
+
+                    // المحاولة 3: مطابقة الرمز + النوع + المدرب (تجاهل اليوم والوقت)
+                    if (bestMatchIndex === -1) {
+                        bestMatchIndex = ss01Data.findIndex((sRow) => {
+                            let crn = sRow['الرقم المرجعي'] || sRow['CRN'] || "";
+                            if (crn && usedCRNs.has(crn)) return false;
+
+                            let sTrainer = String(sRow['اسم المدرب'] || sRow['المدرب'] || "").trim();
+                            let sType = String(sRow['نوع الجدولة'] || sRow['نوع الشعبة'] || "").trim();
+                            let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
+
+                            if (sBase !== rBase) return false;
+                            let typeMatch = (!sType) || (isPracHint && sType.includes('عملي')) || (!isPracHint && sType.includes('نظري'));
+                            if (!typeMatch) return false;
+
+                            return isNameMatch(sTrainer, rTrainer);
+                        });
+                    }
+
+                    // المحاولة 4: مطابقة الرمز + النوع (تجاهل المدرب واليوم والوقت)
+                    if (bestMatchIndex === -1) {
+                        bestMatchIndex = ss01Data.findIndex((sRow) => {
+                            let crn = sRow['الرقم المرجعي'] || sRow['CRN'] || "";
+                            if (crn && usedCRNs.has(crn)) return false;
+
+                            let sType = String(sRow['نوع الجدولة'] || sRow['نوع الشعبة'] || "").trim();
+                            let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
+
+                            if (sBase !== rBase) return false;
+                            let typeMatch = (!sType) || (isPracHint && sType.includes('عملي')) || (!isPracHint && sType.includes('نظري'));
+                            return typeMatch;
+                        });
+                    }
+
+                    // المحاولات اليائسة (تجاهل النوع): مسموحة فقط إذا كان المقرر ليس له شقين
+                    if (!isTwoPartCourse) {
+                        if (bestMatchIndex === -1) {
+                            bestMatchIndex = ss01Data.findIndex((sRow) => {
+                                let crn = sRow['الرقم المرجعي'] || sRow['CRN'] || "";
+                                if (crn && usedCRNs.has(crn)) return false;
+
+                                let sTrainer = String(sRow['اسم المدرب'] || sRow['المدرب'] || "").trim();
+                                let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
+                                if (sBase !== rBase) return false;
+                                return isNameMatch(sTrainer, rTrainer);
+                            });
+                        }
+                        if (bestMatchIndex === -1) {
+                            bestMatchIndex = ss01Data.findIndex((sRow) => {
+                                let crn = sRow['الرقم المرجعي'] || sRow['CRN'] || "";
+                                if (crn && usedCRNs.has(crn)) return false;
+
+                                let sBase = extractCourseBase(sRow['رمز المقرر'] || sRow['المقرر'] || sRow['اسم المقرر']);
+                                return sBase === rBase;
+                            });
+                        }
+                    }
+
+                    let fetchedCRN = "";
+                    if (bestMatchIndex !== -1) {
+                        let matchedSs01Row = ss01Data[bestMatchIndex];
+                        fetchedCRN = matchedSs01Row['الرقم المرجعي'] || matchedSs01Row['CRN'] || "";
+                        if (fetchedCRN) {
+                            usedCRNs.add(fetchedCRN); // حجز الرقم المرجعي بالكامل حتى لا يُعطى لشعبة أخرى
+                        }
+                    }
+
+                    // تعيين هذا الرقم المرجعي لجميع الشعب في هذه المجموعة
+                    mSet.forEach(cs => {
+                        csKeyToCRN[cs] = fetchedCRN;
+                    });
+                });
+
+                // --- الخطوة الرابعة: بناء البيانات النهائية ---
+                let finalData = [];
+                mergedLectures.forEach(row => {
+                    let fetchedTrainerId = "";
+                    if (row.teacher) {
+                        let matchedSl03 = sl03Data.find(slRow => {
+                            let slTrainerName = String(slRow['اسم عضو هيئة التدريبي'] || slRow['اسم عضو هيئة التدريس'] || slRow['اسم المدرب'] || slRow['اسم الموظف'] || slRow['الاسم'] || "").trim();
+                            return isNameMatch(row.teacher, slTrainerName);
+                        });
+                        if (matchedSl03) {
+                            fetchedTrainerId = matchedSl03['رقم الحاسب'] || matchedSl03['رقم المدرب'] || matchedSl03['رقم الموظف'] || matchedSl03['الرقم الوظيفي'] || "";
+                        }
+                    }
+                    if (fetchedTrainerId) fetchedTrainerId = String(fetchedTrainerId).trim().padStart(7, '0');
+
+                    let bld = row.room ? row.room.substring(0, 5) : "";
+                    let finalCRN = csKeyToCRN[row.csKey] || "";
+
+                    finalData.push({
+                        "الفصل التدريبي": row.term,
+                        "الرقم المرجعي": finalCRN,
+                        "اليوم": row.dayName,
+                        "الوقت": row.timeStr,
+                        "المبنى": bld,
+                        "القاعة": row.room,
+                        "رقم المدرب": fetchedTrainerId,
+                        "اسم المدرب": row.teacher,
+                        "اسم المقرر": row.courseName,
+                        "رمز المقرر": row.courseCode,
+                        "الشعبة": row.section,
+                        "نوع المحاضرة": row.finalLectureType
+                    });
+                });
+
+                // --- الخطوة الخامسة: فرز (ترتيب) البيانات النهائية ---
+                const dayOrderMap = {
+                    "الأحد": 1,
+                    "الإثنين": 2,
+                    "الثلاثاء": 3,
+                    "الأربعاء": 4,
+                    "الخميس": 5,
+                    "الجمعة": 6,
+                    "السبت": 7
+                };
+
+                finalData.sort((a, b) => {
+                    // 1. الفرز حسب الشعبة
+                    let secA = String(a["الشعبة"] || "");
+                    let secB = String(b["الشعبة"] || "");
+                    if (secA !== secB) return secA.localeCompare(secB);
+
+                    // 2. الفرز حسب الرقم المرجعي
+                    let crnA = String(a["الرقم المرجعي"] || "");
+                    let crnB = String(b["الرقم المرجعي"] || "");
+                    if (crnA !== crnB) return crnA.localeCompare(crnB);
+
+                    // 3. الفرز حسب اليوم (بناءً على الترتيب المنطقي للأيام)
+                    let dayA = dayOrderMap[a["اليوم"]] || 99;
+                    let dayB = dayOrderMap[b["اليوم"]] || 99;
+                    if (dayA !== dayB) return dayA - dayB;
+
+                    // 4. الفرز حسب الوقت
+                    let timeA = String(a["الوقت"] || "");
+                    let timeB = String(b["الوقت"] || "");
+                    return timeA.localeCompare(timeB);
+                });
+
+                let missingCount = 0;
+                let missingCols = new Set();
+                const columnsToCheck = ["الفصل التدريبي", "الرقم المرجعي", "اليوم", "الوقت", "المبنى", "القاعة", "رقم المدرب"];
+                finalData.forEach(r => {
+                    let hasMissing = false;
+                    columnsToCheck.forEach(c => {
+                        if (r[c] === undefined || r[c] === null || String(r[c]).trim() === "") { hasMissing = true; missingCols.add(c); }
+                    });
+                    if (hasMissing) missingCount++;
+                });
+
+                if (missingCount > 0) {
+                    let missingColsArray = Array.from(missingCols).join(" ، ");
+                    let confirmMsg = `⚠️ تنبيه هام:\n\nهناك (${missingCount}) صفًا في الجدول النهائي تحتوي على خانات فارغة!\n\nالنقص موجود في الأعمدة التالية:\n[ ${missingColsArray} ]\n\nهل تريد الاستمرار واستخراج ملف الإكسل على أية حال؟`;              
+                    if (!confirm(confirmMsg)) {
+                        statusDiv.innerHTML = `<div style="background-color: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; border: 1px solid #ffeeba; font-weight: 600;">
+                            <i data-lucide="x-circle" style="color: #dc3545;"></i> تم إيقاف استخراج الجدول لمراجعة النواقص في الملفات.
+                        </div>`;
+                        btn.disabled = false;
+                        btn.innerHTML = `<i data-lucide="rocket"></i> استخراج الجدول النهائي`;
+                        lucide.createIcons();
+                        return;
+                    }
+                }
+
+            // فلترة البيانات لإزالة التكرار للشيت الأول بناءً على الأعمدة المحددة
+                const uniqueKeys = new Set();
+                const uniqueFinalData = [];
+
+                finalData.forEach(row => {
+                    const key = `${row["الفصل التدريبي"]}|${row["الرقم المرجعي"]}|${row["اليوم"]}|${row["الوقت"]}|${row["المبنى"]}|${row["القاعة"]}|${row["رقم المدرب"]}`;
+                    if (!uniqueKeys.has(key)) {
+                        uniqueKeys.add(key);
+                        uniqueFinalData.push(row);
+                    }
+                });
+
+                const workbook = new ExcelJS.Workbook();
+                
+                // الشيت الأول (الأساسي) - الجدول النهائي (بدون تكرار)
+                const worksheet1 = workbook.addWorksheet("الجدول النهائي", { views: [{ rightToLeft: true, activeCell: 'A1' }] });
+                worksheet1.columns = [
+                    { header: "الفصل التدريبي", key: "الفصل التدريبي", width: 13 },
+                    { header: "الرقم المرجعي", key: "الرقم المرجعي", width: 13 },
+                    { header: "اليوم", key: "اليوم", width: 9 },
+                    { header: "الوقت", key: "الوقت", width: 15 },
+                    { header: "المبنى", key: "المبنى", width: 10 },
+                    { header: "القاعة", key: "القاعة", width: 15 },
+                    { header: "رقم المدرب", key: "رقم المدرب", width: 12 }
+                ];
+                // إضافة البيانات المفلترة (بدون تكرار)
+                worksheet1.addRows(uniqueFinalData);
+                worksheet1.getRow(1).font = { bold: true };
+                worksheet1.getRow(1).alignment = { horizontal: 'center' };
+
+                // الشيت الثاني - كامل البيانات (مع التكرار إن وجد)
+                const worksheet2 = workbook.addWorksheet("كامل البيانات", { views: [{ rightToLeft: true }] });
+                worksheet2.columns = [
+                    { header: "الفصل التدريبي", key: "الفصل التدريبي", width: 13 },
+                    { header: "الرقم المرجعي", key: "الرقم المرجعي", width: 13 },
+                    { header: "اليوم", key: "اليوم", width: 9 },
+                    { header: "الوقت", key: "الوقت", width: 15 },
+                    { header: "المبنى", key: "المبنى", width: 10 },
+                    { header: "القاعة", key: "القاعة", width: 15 },
+                    { header: "رقم المدرب", key: "رقم المدرب", width: 12 },
+                    { header: "اسم المدرب", key: "اسم المدرب", width: 22 },
+                    { header: "اسم المقرر", key: "اسم المقرر", width: 22 },
+                    { header: "رمز المقرر", key: "رمز المقرر", width: 15 },
+                    { header: "الشعبة", key: "الشعبة", width: 10 },
+                    { header: "نوع المحاضرة", key: "نوع المحاضرة", width: 15 }
+                ];
+                // إضافة كامل البيانات
+                worksheet2.addRows(finalData);
+                worksheet2.getRow(1).font = { bold: true };
+                worksheet2.getRow(1).alignment = { horizontal: 'center' };
+                
+                // استخراج وتحميل الملف
+                const buffer = await workbook.xlsx.writeBuffer();
+                const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = "الجدول_النهائي.xlsx";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                // الانتقال لصفحة النجاح (الخطوة 3)
+                document.getElementById('step2').classList.remove('active');
+                document.getElementById('step3').classList.add('active');
+                
+                document.getElementById('final-count-text').innerText = `تم استخراج عدد (${finalData.length}) صف بنجاح.`;
+                
+                // إظهار التحذيرات إن وجدت
+                if (missingCount > 0) {
+                    document.getElementById('warning-section').style.display = 'block';
+                    document.getElementById('missing-rows-text').innerText = `عدد الصفوف التي تحتوي على نقص: ${missingCount}`;
+                    document.getElementById('missing-cols-text').innerText = `الأعمدة الناقصة: ${Array.from(missingCols).join(" ، ")}`;
+                } else {
+                    document.getElementById('warning-section').style.display = 'none';
+                }
+
+            } catch (error) {
+                console.error(error);
+                statusDiv.innerHTML = `<div class='error' style='background: #f8d7da; padding: 10px; border-radius: 5px; margin-top: 10px;'>حدث خطأ أثناء المعالجة: ${error.message}</div>`;
+                btn.disabled = false;
+                btn.innerHTML = `<i data-lucide="rocket"></i> استخراج الجدول النهائي`;
+                lucide.createIcons();
+            }
+        }
+    </script>
+</body>
+</html>
