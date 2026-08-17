@@ -375,31 +375,74 @@
             width: 65px;
         }
 
-        /* ألوان المحاضرات (نظري وعملي) */
+      /* ألوان المحاضرات (نظري وعملي) - تصميم مخفف للازدحام */
         .lec-box {
-            border-radius: 6px;
-            padding: 6px;
-            margin: 2px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-radius: 4px;
+            padding: 4px;
+            margin: 1px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             display: flex;
             flex-direction: column;
             justify-content: center;
             height: 100%;
             box-sizing: border-box;
-            border-right: 4px solid; /* خط جانبي لتمييز اللون أكثر */
+            border-right: 3px solid; 
+            overflow: hidden;
+            cursor: pointer;
+            text-align: right;
         }
         .lec-theory {
-            background-color: #e3f2fd; /* أزرق فاتح جداً */
+            background-color: #e3f2fd; 
             border-color: #42a5f5;
         }
         .lec-practical {
-            background-color: #fff3e0; /* برتقالي فاتح جداً */
+            background-color: #fff3e0; 
             border-color: #ff9800;
         }
-        .lec-title { font-weight: 800; font-size: 12px; margin-bottom: 4px; line-height: 1.2; }
+        .lec-title { 
+            font-weight: 800; 
+            font-size: 11px; 
+            margin-bottom: 3px; 
+            line-height: 1.3; 
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+        }
         .lec-theory .lec-title { color: #1565c0; }
         .lec-practical .lec-title { color: #e65100; }
-        .lec-details { font-size: 11px; color: #555; line-height: 1.5; }
+        
+        .lec-details { 
+            font-size: 10px; 
+            color: #444; 
+            line-height: 1.4; 
+        }
+        .truncate-text {
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis;
+        }
+        .bottom-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 3px;
+        }
+        .room-text {
+            font-weight: 700;
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis;
+            max-width: 50%;
+        }
+        .crn-badge {
+            background: rgba(0,0,0,0.07);
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            color: #333;
+        }
         .lec-badge {
             display: inline-block;
             padding: 2px 6px;
@@ -1403,21 +1446,24 @@ async function processFiles() {
                         let isPrac = lec["نوع المحاضرة"] === 'عملي';
                         let cssClass = isPrac ? 'lec-practical' : 'lec-theory';
                         
-                        // تحديد المعلومة الإضافية التي ستظهر
-                        let extraInfo = currentTab === 'trainer' 
-                            ? `<b>الشعبة:</b> ${lec["الشعبة"] || '-'}` 
-                            : `<b>المدرب:</b> ${lec["اسم المدرب"] || '-'}`;
+                        // تجهيز المتغيرات للجدول
+                        let extraInfo = currentTab === 'trainer' ? lec["الشعبة"] || '-' : lec["اسم المدرب"] || '-';
+                        let crn = lec["الرقم المرجعي"] || '-';
+                        let room = lec["القاعة"] || '-';
+                        
+                        // نص التلميح (يظهر عند مرور الماوس)
+                        let tooltipText = `المقرر: ${lec["اسم المقرر"]}\n${currentTab === 'trainer' ? 'الشعبة' : 'المدرب'}: ${extraInfo}\nالقاعة: ${room}\nالمرجعي: ${crn}\nالوقت: ${lec["الوقت"]}`;
 
                         html += `
                         <td colspan="${colspan}">
-                            <div class="lec-box ${cssClass}">
+                            <div class="lec-box ${cssClass}" title="${tooltipText}">
                                 <div class="lec-title">${lec["اسم المقرر"]}</div>
                                 <div class="lec-details">
-                                    ${extraInfo}<br>
-                                    <b>القاعة:</b> ${lec["القاعة"] || '-'}<br>
-                                    <span style="color:#000; background:rgba(255,255,255,0.6); padding:1px 4px; border-radius:3px; margin-top:2px; display:inline-block;">
-                                        المرجعي: ${lec["الرقم المرجعي"] || '-'}
-                                    </span>
+                                    <div class="truncate-text">${extraInfo}</div>
+                                    <div class="bottom-info">
+                                        <span class="room-text">${room}</span>
+                                        <span class="crn-badge">${crn}</span>
+                                    </div>
                                 </div>
                             </div>
                         </td>`;
