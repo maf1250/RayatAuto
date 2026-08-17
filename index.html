@@ -578,7 +578,7 @@
                 </table>
                 <div class="checkbox-group">
                     <input type="checkbox" id="adjustEvenPeriods" checked>
-                    <label for="adjustEvenPeriods" title="إضافة دقيقة لتفادي التعارض" style="cursor: help; border-bottom: 1px dashed #006d60;">
+                    <label for="adjustEvenPeriods" title="إضافة دقيقة لتفادي التعارض بين المحاضرات" style="cursor: help; border-bottom: 1px dashed #006d60;">
                         إضافة دقيقة للمحاضرات الفردية (تفادياً للتعارض)
                     </label>
                 </div>
@@ -590,7 +590,6 @@
             <div id="step2-status" class="status-msg"></div>
         </div>
 
-        <!-- الخطوة 3: صفحة النتائج -->
        <!-- الخطوة 3: صفحة النتائج -->
         <div id="step3" class="step">
             <h2 class="step-title"><i data-lucide="table"></i> معاينة الجدول النهائي</h2>
@@ -600,7 +599,7 @@
                     <i data-lucide="clipboard-copy"></i> نسخ إلى رايات أوتو
                 </button>
                 <button class="btn-process btn-secondary" onclick="downloadExcel()" style="width: auto; padding: 10px 20px;">
-                    <i data-lucide="download"></i> تحميل كملف Excel
+                    <i data-lucide="download"></i> تحميل كملف اكسل
                 </button>
             </div>
 
@@ -610,12 +609,12 @@
 
             <div class="tabs">
                 <button class="tab-btn active" id="tab-all" onclick="switchTab('all')">جدول الوحدة</button>
-                <button class="tab-btn" id="tab-trainer" onclick="switchTab('trainer')">جدول مدرب</button>
-                <button class="tab-btn" id="tab-section" onclick="switchTab('section')">جدول شعبة</button>
+                <button class="tab-btn" id="tab-trainer" onclick="switchTab('trainer')">جدول المدرب</button>
+                <button class="tab-btn" id="tab-section" onclick="switchTab('section')">جدول الشعبة</button>
             </div>
 
             <div id="filter-container" class="filter-container">
-                <label for="data-filter">اختر: </label>
+                <label for="data-filter"></label>
                 <select id="data-filter" onchange="renderResultsTable()"></select>
             </div>
 
@@ -623,7 +622,7 @@
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>المرجعي</th>
+                            <th>الرقم المرجعي</th>
                             <th>المقرر</th>
                             <th>الشعبة</th>
                             <th>اليوم</th>
