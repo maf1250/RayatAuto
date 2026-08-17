@@ -539,12 +539,19 @@
             box-shadow: inset 0 0 5px rgba(0, 142, 126, 0.2);
             outline: none;
         }
+  /* تلوين خلفية الخلية الفارغة باللون الأحمر */
+        .editable-cell:empty {
+            background-color: #ffebee !important; /* خلفية حمراء فاتحة */
+            border: 1px dashed #f44336 !important; /* إطار أحمر */
+        }
+
         .editable-cell:empty::before {
             content: "✍️ أضف هنا";
-            color: #b0bec5;
+            color: #d32f2f; /* لون النص أحمر غامق ليناسب الخلفية */
             font-size: 11px;
             pointer-events: none;
         }
+        
         .edit-hint {
             margin-bottom: 15px;
             font-size: 13px;
