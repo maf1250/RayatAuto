@@ -345,6 +345,71 @@
         .data-table tr:nth-child(even) { background-color: #f9f9f9; }
         .data-table tr:hover { background-color: #f1f8f7; }
 
+        /* تنسيقات الجدول العرضي (الجدول الأسبوعي) */
+        .timetable {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: center;
+            font-size: 13px;
+            background: #fff;
+            table-layout: fixed;
+            min-width: 800px; /* لضمان عدم تداخل الخلايا في الشاشات الصغيرة */
+        }
+        .timetable th {
+            background: #008e7e;
+            color: white;
+            padding: 10px 2px;
+            border: 1px solid #cbe6e3;
+            font-size: 12px;
+        }
+        .timetable td {
+            border: 1px solid #e0e0e0;
+            padding: 4px;
+            height: 70px;
+            vertical-align: middle;
+        }
+        .timetable .day-col {
+            background: #eef7f6;
+            font-weight: bold;
+            color: #006d60;
+            width: 65px;
+        }
+
+        /* ألوان المحاضرات (نظري وعملي) */
+        .lec-box {
+            border-radius: 6px;
+            padding: 6px;
+            margin: 2px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 100%;
+            box-sizing: border-box;
+            border-right: 4px solid; /* خط جانبي لتمييز اللون أكثر */
+        }
+        .lec-theory {
+            background-color: #e3f2fd; /* أزرق فاتح جداً */
+            border-color: #42a5f5;
+        }
+        .lec-practical {
+            background-color: #fff3e0; /* برتقالي فاتح جداً */
+            border-color: #ff9800;
+        }
+        .lec-title { font-weight: 800; font-size: 12px; margin-bottom: 4px; line-height: 1.2; }
+        .lec-theory .lec-title { color: #1565c0; }
+        .lec-practical .lec-title { color: #e65100; }
+        .lec-details { font-size: 11px; color: #555; line-height: 1.5; }
+        .lec-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .badge-theory { background: #e3f2fd; color: #1565c0; }
+        .badge-prac { background: #fff3e0; color: #e65100; }
+        
         /* تنسيق الفلتر */
         .filter-container {
             display: none;
@@ -485,7 +550,7 @@
             </p>
 
             <div class="tabs">
-                <button class="tab-btn active" id="tab-all" onclick="switchTab('all')">جدول الكلية كامل</button>
+                <button class="tab-btn active" id="tab-all" onclick="switchTab('all')">جدول الوحدة</button>
                 <button class="tab-btn" id="tab-trainer" onclick="switchTab('trainer')">جدول مدرب</button>
                 <button class="tab-btn" id="tab-section" onclick="switchTab('section')">جدول شعبة</button>
             </div>
@@ -1096,7 +1161,7 @@ async function processFiles() {
                     let bld = row.room ? row.room.substring(0, 5) : "";
                     let finalCRN = csKeyToCRN[row.csKey] || "";
 
-                    finalData.push({
+                   finalData.push({
                         "الفصل التدريبي": row.term,
                         "الرقم المرجعي": finalCRN,
                         "اليوم": row.dayName,
@@ -1108,7 +1173,9 @@ async function processFiles() {
                         "اسم المقرر": row.courseName,
                         "رمز المقرر": row.courseCode,
                         "الشعبة": row.section,
-                        "نوع المحاضرة": row.finalLectureType
+                        "نوع المحاضرة": row.finalLectureType,
+                        "startP": row.startP,  /* تم إضافته للجدول العرضي */
+                        "endP": row.endP       /* تم إضافته للجدول العرضي */
                     });
                 });
 
@@ -1246,42 +1313,126 @@ async function processFiles() {
             }
         }
 
-        // دالة رسم الجدول النهائي في الخطوة الثالثة (باسم جديد لعدم التعارض)
+     // دالة رسم الجدول النهائي (مدمجة للعرضي والطولي)
         function renderResultsTable() {
-            const tbody = document.getElementById('result-tbody');
+            const container = document.querySelector('.table-responsive');
             const filterValue = document.getElementById('data-filter').value;
-            tbody.innerHTML = '';
-
-            // نستخدم البيانات الشاملة
             let dataToShow = globalFinalData;
 
-            if (currentTab === 'trainer' && filterValue) {
-                dataToShow = dataToShow.filter(item => item["اسم المدرب"] === filterValue);
-            } else if (currentTab === 'section' && filterValue) {
-                dataToShow = dataToShow.filter(item => item["الشعبة"] === filterValue);
-            } else if (currentTab !== 'all') {
-                // إذا كان التبويب ليس الكل ولم يتم اختيار فلتر، لا تعرض شيء
-                dataToShow = []; 
-            }
-
-            if (dataToShow.length === 0 && currentTab !== 'all') {
-                tbody.innerHTML = '<tr><td colspan="7" style="padding: 20px; color: #666;">الرجاء الاختيار من القائمة أعلاه لعرض الجدول</td></tr>';
+            // --- 1. إذا كان التبويب هو "الكل" (جدول طولي عادي) ---
+            if (currentTab === 'all') {
+                let html = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>المرجعي</th>
+                            <th>المقرر</th>
+                            <th>الشعبة</th>
+                            <th>اليوم</th>
+                            <th>الوقت</th>
+                            <th>القاعة</th>
+                            <th>المدرب</th>
+                            <th>النوع</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+                
+                if(dataToShow.length === 0) {
+                    html += `<tr><td colspan="8" style="padding:20px; color:#666;">لا توجد بيانات</td></tr>`;
+                } else {
+                    dataToShow.forEach(row => {
+                        let badgeClass = row["نوع المحاضرة"] === 'عملي' ? 'badge-prac' : 'badge-theory';
+                        html += `
+                            <tr>
+                                <td style="font-weight: bold; color: #008e7e;">${row["الرقم المرجعي"] || '-'}</td>
+                                <td>${row["اسم المقرر"] || '-'}</td>
+                                <td>${row["الشعبة"] || '-'}</td>
+                                <td>${row["اليوم"] || '-'}</td>
+                                <td dir="ltr">${row["الوقت"] || '-'}</td>
+                                <td>${row["القاعة"] || '-'}</td>
+                                <td>${row["اسم المدرب"] || '-'}</td>
+                                <td><span class="lec-badge ${badgeClass}">${row["نوع المحاضرة"] || '-'}</span></td>
+                            </tr>
+                        `;
+                    });
+                }
+                html += `</tbody></table>`;
+                container.innerHTML = html;
                 return;
             }
 
-            dataToShow.forEach(row => {
-                tbody.innerHTML += `
+            // --- 2. إذا كان التبويب "مدرب" أو "شعبة" (رسم جدول عرضي - Timetable) ---
+            if (!filterValue) {
+                container.innerHTML = '<table class="data-table"><tbody><tr><td style="padding: 30px; color: #666; text-align:center; font-size:15px;"><i data-lucide="filter" style="vertical-align:middle;"></i> الرجاء الاختيار من القائمة أعلاه لعرض الجدول الأسبوعي</td></tr></tbody></table>';
+                lucide.createIcons();
+                return;
+            }
+
+            if (currentTab === 'trainer') {
+                dataToShow = dataToShow.filter(item => item["اسم المدرب"] === filterValue);
+            } else if (currentTab === 'section') {
+                dataToShow = dataToShow.filter(item => item["الشعبة"] === filterValue);
+            }
+
+            const days = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس"];
+            
+            // بناء رأس الجدول العرضي
+            let html = `
+            <table class="timetable">
+                <thead>
                     <tr>
-                        <td style="font-weight: bold; color: #008e7e;">${row["الرقم المرجعي"] || '-'}</td>
-                        <td>${row["اسم المقرر"] || '-'}</td>
-                        <td>${row["الشعبة"] || '-'}</td>
-                        <td>${row["اليوم"] || '-'}</td>
-                        <td dir="ltr">${row["الوقت"] || '-'}</td>
-                        <td>${row["القاعة"] || '-'}</td>
-                        <td>${row["اسم المدرب"] || '-'}</td>
+                        <th class="day-col">اليوم</th>
+                        ${[...Array(10)].map((_, i) => `<th>م ${i+1}</th>`).join('')}
                     </tr>
-                `;
+                </thead>
+                <tbody>`;
+
+            // بناء صفوف الأيام
+            days.forEach(day => {
+                html += `<tr><td class="day-col">${day}</td>`;
+                
+                let dayLectures = dataToShow.filter(r => r["اليوم"] === day);
+                let p = 1;
+                
+                while (p <= 10) {
+                    // البحث عن محاضرة تبدأ في هذه الحصة
+                    let lec = dayLectures.find(r => r.startP === p);
+                    
+                    if (lec) {
+                        let colspan = lec.endP - lec.startP + 1; // كم حصة تأخذ هذه المحاضرة؟
+                        let isPrac = lec["نوع المحاضرة"] === 'عملي';
+                        let cssClass = isPrac ? 'lec-practical' : 'lec-theory';
+                        
+                        // تحديد المعلومة الإضافية التي ستظهر
+                        let extraInfo = currentTab === 'trainer' 
+                            ? `<b>الشعبة:</b> ${lec["الشعبة"] || '-'}` 
+                            : `<b>المدرب:</b> ${lec["اسم المدرب"] || '-'}`;
+
+                        html += `
+                        <td colspan="${colspan}">
+                            <div class="lec-box ${cssClass}">
+                                <div class="lec-title">${lec["اسم المقرر"]}</div>
+                                <div class="lec-details">
+                                    ${extraInfo}<br>
+                                    <b>القاعة:</b> ${lec["القاعة"] || '-'}<br>
+                                    <span style="color:#000; background:rgba(255,255,255,0.6); padding:1px 4px; border-radius:3px; margin-top:2px; display:inline-block;">
+                                        المرجعي: ${lec["الرقم المرجعي"] || '-'}
+                                    </span>
+                                </div>
+                            </div>
+                        </td>`;
+                        p += colspan; // القفز بعدد الحصص المدمجة
+                    } else {
+                        // لا توجد محاضرة هنا، اطبع خلية فارغة
+                        html += `<td></td>`;
+                        p++;
+                    }
+                }
+                html += `</tr>`;
             });
+
+            html += `</tbody></table>`;
+            container.innerHTML = html;
         }
         
         // دالة إظهار التوست (Toast)
