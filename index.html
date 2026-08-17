@@ -367,6 +367,40 @@
             justify-content: center;
             margin-bottom: 20px;
         }
+        /* تنسيق إشعار التوست (Toast) */
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #28a745;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 15px 20px;
+            position: fixed;
+            z-index: 1000;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            font-size: 15px;
+            font-weight: 600;
+            box-shadow: 0px 4px 15px rgba(0,0,0,0.2);
+            opacity: 0;
+            transition: opacity 0.4s, bottom 0.4s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+            bottom: 50px;
+        }
+
+        #toast.error {
+            background-color: #dc3545; 
+        }
     </style>
 </head>
 <body>
@@ -495,7 +529,9 @@
  <div class="visitor-counter">
    <img id="visitCounterImage" src="https://visitor-badge.laobi.icu/badge?page_id=https%3A%2F%2Fmaf1250.github.io%2FRayatAuto%2F&left_color=%235c5856&right_color=%23548160&radius=9" alt="">
 </div>
+            <div id="toast"></div>
          </div>
+    
     <script>
 
         
@@ -1247,30 +1283,51 @@ async function processFiles() {
             });
         }
 
-       // دالة النسخ لرايات أوتو
+     // دالة إظهار التوست (Toast)
+        function showToast(message, isError = false) {
+            const toast = document.getElementById("toast");
+            toast.innerHTML = message;
+            
+            if (isError) {
+                toast.classList.add("error");
+            } else {
+                toast.classList.remove("error");
+            }
+
+            toast.classList.add("show");
+            lucide.createIcons(); // لتفعيل أيقونات lucide داخل التوست
+            
+            // إخفاء التوست بعد 3.5 ثوانٍ
+            setTimeout(() => {
+                toast.classList.remove("show");
+            }, 3500);
+        }
+
+        // دالة النسخ لرايات أوتو
         function copyToRayatAuto() {
             if (globalUniqueData.length === 0) {
-                alert("لا توجد بيانات لنسخها!");
+                showToast('<i data-lucide="x-circle"></i> لا توجد بيانات لنسخها!', true);
                 return;
             }
 
             // الأعمدة المطلوبة بالضبط لرايات أوتو
             const columns = ["الفصل التدريبي", "الرقم المرجعي", "اليوم", "الوقت", "المبنى", "القاعة", "رقم المدرب"];
             
+            // بناء النص المنسوخ (الصفوف مفصولة بسطر جديد، والأعمدة مفصولة بمسافة Tab)
             let textToCopy = "";
             globalUniqueData.forEach(row => {
                 let rowData = columns.map(col => row[col] || "");
                 textToCopy += rowData.join("\t") + "\n";
             });
 
+            // إضافة trim() لمنع السطر الفارغ في النهاية
             navigator.clipboard.writeText(textToCopy.trim()).then(() => {
-                alert("✅ تم نسخ البيانات بنجاح!\nيمكنك الآن لصقها مباشرة في أداة رايات أوتو.");
+                showToast('<i data-lucide="check-circle"></i> تم نسخ البيانات بنجاح! الصقها في رايات أوتو.');
             }).catch(err => {
-                alert("حدث خطأ أثناء النسخ: " + err);
+                showToast('<i data-lucide="x-circle"></i> حدث خطأ أثناء النسخ: ' + err, true);
             });
         }
 
-        // دالة تحميل ملف الإكسل (نفس الكود السابق وضعناه في دالة منفصلة)
         async function downloadExcel() {
             try {
                 const workbook = new ExcelJS.Workbook();
