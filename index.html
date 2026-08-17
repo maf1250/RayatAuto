@@ -1359,14 +1359,7 @@ async function processFiles() {
                 
                 document.getElementById('final-count-text').innerText = `إجمالي المحاضرات المستخرجة بعد الدمج: (${uniqueFinalData.length}) محاضرة`;
                 
-                // إظهار التحذيرات إن وجدت
-                if (missingCount > 0) {
-                    document.getElementById('warning-section').style.display = 'block';
-                    document.getElementById('missing-rows-text').innerText = `عدد الصفوف التي تحتوي على نقص: ${missingCount}`;
-                    document.getElementById('missing-cols-text').innerText = `الأعمدة الناقصة: ${Array.from(missingCols).join(" ، ")}`;
-                } else {
-                    document.getElementById('warning-section').style.display = 'none';
-                }
+               updateMissingStats();
 
            // عرض الجدول الافتراضي وإعادة تفعيل الأيقونات
                 switchTab('all');
@@ -1665,10 +1658,11 @@ async function processFiles() {
         }
 
         // دالة تحديث بيانات الخلية عند التعديل
-        function updateCellData(index, field, cellElement) {
+           function updateCellData(index, field, cellElement) {
             let newValue = cellElement.innerText.trim();
             if (globalFinalData[index][field] !== newValue) {
                 globalFinalData[index][field] = newValue;
+                updateMissingStats();
             }
         }
 
@@ -1683,6 +1677,33 @@ async function processFiles() {
                     globalUniqueData.push(row);
                 }
             });
+        }
+
+        // دالة لتحديث عداد النواقص ديناميكياً
+        function updateMissingStats() {
+            let missingCount = 0;
+            let missingCols = new Set();
+            const columnsToCheck = ["الفصل التدريبي", "الرقم المرجعي", "اليوم", "الوقت", "المبنى", "القاعة", "رقم المدرب"];
+            
+            globalFinalData.forEach(r => {
+                let hasMissing = false;
+                columnsToCheck.forEach(c => {
+                    if (r[c] === undefined || r[c] === null || String(r[c]).trim() === "") { 
+                        hasMissing = true; 
+                        missingCols.add(c); 
+                    }
+                });
+                if (hasMissing) missingCount++;
+            });
+
+            const warningSection = document.getElementById('warning-section');
+            if (missingCount > 0) {
+                warningSection.style.display = 'block';
+                document.getElementById('missing-rows-text').innerText = `عدد الصفوف التي تحتوي على نقص: ${missingCount}`;
+                document.getElementById('missing-cols-text').innerText = `الأعمدة الناقصة: ${Array.from(missingCols).join(" ، ")}`;
+            } else {
+                warningSection.style.display = 'none'; // إخفاء التنبيه إذا اكتملت كل النواقص
+            }
         }
         
     </script>
