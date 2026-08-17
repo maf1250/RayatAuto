@@ -619,6 +619,26 @@
             background-color: #0d47a1;
             transform: scale(1.05);
         }
+        /* زر إخفاء الإعلان */
+        .close-ad-btn {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: transparent;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        .close-ad-btn:hover {
+            background-color: #ffebee;
+            color: #d32f2f;
+        }
     </style>
 </head>
 <body>
@@ -702,8 +722,11 @@
             </p>
 
              <!-- بداية الإعلان -->
-                     <div class="ad-banner-matrix">
-   <strong>هل جربت أداة منظومة الإسناد الآلي؟</strong>
+     <div class="ad-banner-matrix" id="matrixAd">
+                <button class="close-ad-btn" onclick="hideAd()" title="إخفاء">
+                    <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+                </button>
+         <strong>هل جربت أداة منظومة الإسناد الآلي؟</strong>
                         <p>اكتشف الآن منظومة الإسناد الذكية لبناء جداول المتدربين بضغطة زر واحدة!</p>
                          <a href="https://maf1250.github.io/matrix/" target="_blank" class="btn-matrix">
                     انتقل للأداة الآن <i data-lucide="external-link"></i>
@@ -1768,6 +1791,13 @@ async function processFiles() {
                 document.getElementById('missing-cols-text').innerText = `الأعمدة الناقصة: ${Array.from(missingCols).join(" ، ")}`;
             } else {
                 warningSection.style.display = 'none'; // إخفاء التنبيه إذا اكتملت كل النواقص
+            }
+        }
+        // دالة إخفاء الإعلان
+        function hideAd() {
+            const ad = document.getElementById('matrixAd');
+            if (ad) {
+                ad.style.display = 'none';
             }
         }
         
