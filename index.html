@@ -525,6 +525,40 @@
         #toast.error {
             background-color: #dc3545; 
         }
+
+        /* تنسيقات الخلايا القابلة للتعديل */
+        .editable-cell {
+            background-color: #fffde7; /* أصفر فاتح جداً */
+            border: 1px dashed #ffc107 !important;
+            cursor: text;
+            transition: all 0.2s;
+        }
+        .editable-cell:focus {
+            background-color: #fff;
+            border: 2px solid #008e7e !important;
+            box-shadow: inset 0 0 5px rgba(0, 142, 126, 0.2);
+            outline: none;
+        }
+        .editable-cell:empty::before {
+            content: "✍️ أضف هنا";
+            color: #b0bec5;
+            font-size: 11px;
+            pointer-events: none;
+        }
+        .edit-hint {
+            margin-bottom: 15px;
+            font-size: 13px;
+            color: #d39e00;
+            background: #fff8c4;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #ffeeba;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+        }
+        
     </style>
 </head>
 <body>
@@ -1378,17 +1412,24 @@ async function processFiles() {
             let dataToShow = globalFinalData;
 
             // --- 1. إذا كان التبويب هو "الكل" (جدول طولي عادي) ---
+           // --- 1. إذا كان التبويب هو "الكل" (جدول طولي عادي وقابل للتعديل) ---
             if (currentTab === 'all') {
                 let html = `
+                <div class="edit-hint">
+                    <i data-lucide="edit-3"></i> 
+                    ميزة ذكية: الخلايا المظللة باللون الأصفر (المرجعي، المبنى، القاعة، رقم المدرب) يمكنك النقر عليها وتعديلها مباشرة قبل النسخ!
+                </div>
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>المرجعي</th>
+                            <th>المرجعي ✍️</th>
                             <th>المقرر</th>
                             <th>الشعبة</th>
                             <th>اليوم</th>
                             <th>الوقت</th>
-                            <th>القاعة</th>
+                            <th>المبنى ✍️</th>
+                            <th>القاعة ✍️</th>
+                            <th>رقم المدرب ✍️</th>
                             <th>المدرب</th>
                             <th>النوع</th>
                         </tr>
@@ -1396,18 +1437,20 @@ async function processFiles() {
                     <tbody>`;
                 
                 if(dataToShow.length === 0) {
-                    html += `<tr><td colspan="8" style="padding:20px; color:#666;">لا توجد بيانات</td></tr>`;
+                    html += `<tr><td colspan="10" style="padding:20px; color:#666;">لا توجد بيانات</td></tr>`;
                 } else {
-                    dataToShow.forEach(row => {
+                    dataToShow.forEach((row, index) => {
                         let badgeClass = row["نوع المحاضرة"] === 'عملي' ? 'badge-prac' : 'badge-theory';
                         html += `
                             <tr>
-                                <td style="font-weight: bold; color: #008e7e;">${row["الرقم المرجعي"] || '-'}</td>
+                                <td class="editable-cell" contenteditable="true" onblur="updateCellData(${index}, 'الرقم المرجعي', this)">${row["الرقم المرجعي"] || ''}</td>
                                 <td>${row["اسم المقرر"] || '-'}</td>
                                 <td>${row["الشعبة"] || '-'}</td>
                                 <td>${row["اليوم"] || '-'}</td>
                                 <td dir="ltr">${row["الوقت"] || '-'}</td>
-                                <td>${row["القاعة"] || '-'}</td>
+                                <td class="editable-cell" contenteditable="true" onblur="updateCellData(${index}, 'المبنى', this)">${row["المبنى"] || ''}</td>
+                                <td class="editable-cell" contenteditable="true" onblur="updateCellData(${index}, 'القاعة', this)">${row["القاعة"] || ''}</td>
+                                <td class="editable-cell" contenteditable="true" onblur="updateCellData(${index}, 'رقم المدرب', this)">${row["رقم المدرب"] || ''}</td>
                                 <td>${row["اسم المدرب"] || '-'}</td>
                                 <td><span class="lec-badge ${badgeClass}">${row["نوع المحاضرة"] || '-'}</span></td>
                             </tr>
@@ -1416,6 +1459,7 @@ async function processFiles() {
                 }
                 html += `</tbody></table>`;
                 container.innerHTML = html;
+                lucide.createIcons();
                 return;
             }
 
@@ -1521,34 +1565,33 @@ async function processFiles() {
         }
 
         // دالة النسخ لرايات أوتو
-        function copyToRayatAuto() {
+   function copyToRayatAuto() {
+            regenerateUniqueData(); // تحديث البيانات لأخذ التعديلات الجديدة في الاعتبار
+            
             if (globalUniqueData.length === 0) {
                 showToast('<i data-lucide="x-circle"></i> لا توجد بيانات لنسخها!', true);
                 return;
             }
 
-            // الأعمدة المطلوبة بالضبط لرايات أوتو
             const columns = ["الفصل التدريبي", "الرقم المرجعي", "اليوم", "الوقت", "المبنى", "القاعة", "رقم المدرب"];
-            
-            // بناء النص المنسوخ (الصفوف مفصولة بسطر جديد، والأعمدة مفصولة بمسافة Tab)
             let textToCopy = "";
             globalUniqueData.forEach(row => {
                 let rowData = columns.map(col => row[col] || "");
                 textToCopy += rowData.join("\t") + "\n";
             });
 
-            // إضافة trim() لمنع السطر الفارغ في النهاية
             navigator.clipboard.writeText(textToCopy.trim()).then(() => {
-                showToast('<i data-lucide="check-circle"></i> تم نسخ البيانات بنجاح! ويمكن لصقها في رايات أوتو.');
+                showToast('<i data-lucide="check-circle"></i> تم تحديث ونسخ البيانات بنجاح! الصقها في رايات أوتو.');
             }).catch(err => {
                 showToast('<i data-lucide="x-circle"></i> حدث خطأ أثناء النسخ: ' + err, true);
             });
         }
 
-        async function downloadExcel() {
+      async function downloadExcel() {
             try {
-                const workbook = new ExcelJS.Workbook();
+                regenerateUniqueData(); // تحديث البيانات لأخذ التعديلات الجديدة في الاعتبار
                 
+                const workbook = new ExcelJS.Workbook();
                 const worksheet1 = workbook.addWorksheet("الجدول النهائي", { views: [{ rightToLeft: true, activeCell: 'A1' }] });
                 worksheet1.columns = [
                     { header: "الفصل التدريبي", key: "الفصل التدريبي", width: 13 },
@@ -1594,7 +1637,7 @@ async function processFiles() {
                 alert("حدث خطأ أثناء تحميل الملف: " + err);
             }
         }
-
+        
         // دوال تظليل المحاضرات المرتبطة بنفس الرقم المرجعي
         function highlightCRN(crn) {
             if (!crn || crn === '-') return;
@@ -1611,6 +1654,27 @@ async function processFiles() {
         function removeHighlightCRN() {
             document.querySelectorAll('.lec-box').forEach(el => {
                 el.classList.remove('highlighted-crn', 'dimmed-crn');
+            });
+        }
+
+        // دالة تحديث بيانات الخلية عند التعديل
+        function updateCellData(index, field, cellElement) {
+            let newValue = cellElement.innerText.trim();
+            if (globalFinalData[index][field] !== newValue) {
+                globalFinalData[index][field] = newValue;
+            }
+        }
+
+        // دالة إعادة بناء البيانات المفلترة (الفريدة) بعد التعديلات
+        function regenerateUniqueData() {
+            const uniqueKeys = new Set();
+            globalUniqueData = [];
+            globalFinalData.forEach(row => {
+                const key = `${row["الفصل التدريبي"]}|${row["الرقم المرجعي"]}|${row["اليوم"]}|${row["الوقت"]}|${row["المبنى"]}|${row["القاعة"]}|${row["رقم المدرب"]}`;
+                if (!uniqueKeys.has(key)) {
+                    uniqueKeys.add(key);
+                    globalUniqueData.push(row);
+                }
             });
         }
         
