@@ -492,7 +492,7 @@
 
             <div id="filter-container" class="filter-container">
                 <label for="data-filter">اختر: </label>
-                <select id="data-filter" onchange="renderTable()"></select>
+                <select id="data-filter" onchange="renderResultsTable()"></select>
             </div>
 
             <div class="table-responsive">
@@ -1214,7 +1214,7 @@ async function processFiles() {
                 lucide.createIcons();
             }
         }
-        // دوال التحكم بالتبويبات وعرض الجدول
+     // دوال التحكم بالتبويبات وعرض الجدول
         function switchTab(tab) {
             currentTab = tab;
             
@@ -1228,30 +1228,31 @@ async function processFiles() {
 
             if (tab === 'all') {
                 filterContainer.style.display = 'none';
-                renderTable();
+                renderResultsTable(); // تم تغيير الاسم هنا
             } else if (tab === 'trainer') {
                 filterContainer.style.display = 'block';
                 // جلب أسماء المدربين بدون تكرار
                 let trainers = [...new Set(globalFinalData.map(item => item["اسم المدرب"]).filter(Boolean))].sort();
                 filterSelect.innerHTML = '<option value="">-- اختر المدرب --</option>';
                 trainers.forEach(t => filterSelect.innerHTML += `<option value="${t}">${t}</option>`);
-                renderTable();
+                renderResultsTable(); // تم تغيير الاسم هنا
             } else if (tab === 'section') {
                 filterContainer.style.display = 'block';
                 // جلب الشعب بدون تكرار
                 let sections = [...new Set(globalFinalData.map(item => item["الشعبة"]).filter(Boolean))].sort();
                 filterSelect.innerHTML = '<option value="">-- اختر الشعبة --</option>';
                 sections.forEach(s => filterSelect.innerHTML += `<option value="${s}">${s}</option>`);
-                renderTable();
+                renderResultsTable(); // تم تغيير الاسم هنا
             }
         }
 
-        function renderTable() {
+        // دالة رسم الجدول النهائي في الخطوة الثالثة (باسم جديد لعدم التعارض)
+        function renderResultsTable() {
             const tbody = document.getElementById('result-tbody');
             const filterValue = document.getElementById('data-filter').value;
             tbody.innerHTML = '';
 
-            // نستخدم البيانات الشاملة (لأن الشيت الأول لا يحتوي على اسم المدرب والمقرر بل أرقام فقط)
+            // نستخدم البيانات الشاملة
             let dataToShow = globalFinalData;
 
             if (currentTab === 'trainer' && filterValue) {
@@ -1282,8 +1283,8 @@ async function processFiles() {
                 `;
             });
         }
-
-     // دالة إظهار التوست (Toast)
+        
+        // دالة إظهار التوست (Toast)
         function showToast(message, isError = false) {
             const toast = document.getElementById("toast");
             toast.innerHTML = message;
