@@ -1474,7 +1474,7 @@ async function processFiles() {
 
             // إضافة trim() لمنع السطر الفارغ في النهاية
             navigator.clipboard.writeText(textToCopy.trim()).then(() => {
-                showToast('<i data-lucide="check-circle"></i> تم نسخ البيانات بنجاح! الصقها في رايات أوتو.');
+                showToast('<i data-lucide="check-circle"></i> تم نسخ البيانات بنجاح! ويمكن لصقها في رايات أوتو.');
             }).catch(err => {
                 showToast('<i data-lucide="x-circle"></i> حدث خطأ أثناء النسخ: ' + err, true);
             });
