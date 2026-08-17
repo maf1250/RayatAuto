@@ -317,7 +317,7 @@
 
         /* تنسيق الجدول */
         .table-responsive {
-            max-height: 400px;
+            max-height: 650px;
             overflow-y: auto;
             border: 1px solid #e0e0e0;
             border-radius: 8px;
@@ -452,6 +452,22 @@
         }
         .badge-theory { background: #e3f2fd; color: #1565c0; }
         .badge-prac { background: #fff3e0; color: #e65100; }
+
+        /* تأثيرات التركيز على نفس الرقم المرجعي */
+        .lec-box {
+            transition: all 0.2s ease; /* انتقال ناعم */
+        }
+        .lec-box.highlighted-crn {
+            transform: scale(1.03);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 10;
+            position: relative;
+            filter: brightness(0.95);
+        }
+        .lec-box.dimmed-crn {
+            opacity: 0.3;
+            filter: grayscale(0.8);
+        }
         
         /* تنسيق الفلتر */
         .filter-container {
@@ -1301,7 +1317,7 @@ async function processFiles() {
                 document.getElementById('step3').classList.add('active');
                 document.querySelector('.container').classList.add('wide');
                 
-                document.getElementById('final-count-text').innerText = `إجمالي المحاضرات المستخرجة: (${uniqueFinalData.length}) محاضرة`;
+                document.getElementById('final-count-text').innerText = `إجمالي المحاضرات المستخرجة بعد الدمج: (${uniqueFinalData.length}) محاضرة`;
                 
                 // إظهار التحذيرات إن وجدت
                 if (missingCount > 0) {
@@ -1456,7 +1472,11 @@ async function processFiles() {
 
                         html += `
                         <td colspan="${colspan}">
-                            <div class="lec-box ${cssClass}" title="${tooltipText}">
+                            <div class="lec-box ${cssClass}" 
+                                 title="${tooltipText}" 
+                                 data-crn="${crn}"
+                                 onmouseenter="highlightCRN('${crn}')"
+                                 onmouseleave="removeHighlightCRN()">
                                 <div class="lec-title">${lec["اسم المقرر"]}</div>
                                 <div class="lec-details">
                                     <div class="truncate-text">${extraInfo}</div>
@@ -1575,6 +1595,26 @@ async function processFiles() {
                 alert("حدث خطأ أثناء تحميل الملف: " + err);
             }
         }
+
+        // دوال تظليل المحاضرات المرتبطة بنفس الرقم المرجعي
+        function highlightCRN(crn) {
+            if (!crn || crn === '-') return;
+            // تظليل المحاضرات المطابقة
+            document.querySelectorAll(`.lec-box[data-crn="${crn}"]`).forEach(el => {
+                el.classList.add('highlighted-crn');
+            });
+            // بهتان المحاضرات غير المطابقة
+            document.querySelectorAll(`.lec-box:not([data-crn="${crn}"])`).forEach(el => {
+                el.classList.add('dimmed-crn');
+            });
+        }
+
+        function removeHighlightCRN() {
+            document.querySelectorAll('.lec-box').forEach(el => {
+                el.classList.remove('highlighted-crn', 'dimmed-crn');
+            });
+        }
+        
     </script>
 </body>
 </html>
