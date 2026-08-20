@@ -561,7 +561,21 @@
 .contact-form-group input:focus, .contact-form-group select:focus, .contact-form-group textarea:focus {
     box-shadow: 0 0 8px rgba(0, 142, 126, 0.3); border-color: #008e7e;
 }
-
+        
+/* تنسيق صندوق المراسلة المنفصل */
+.contact-modal-box {
+    background: #f4f9f8; 
+    border-radius: 12px; 
+    padding: 25px;
+    width: 90%; 
+    max-width: 450px; /* عرض مناسب للمراسلة */
+    position: relative; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2); 
+    border: 2px solid #008e7e;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+        
   /* تلوين خلفية الخلية الفارغة باللون الأحمر */
         .editable-cell:empty {
             background-color: #ffebee !important; /* خلفية حمراء فاتحة */
@@ -813,7 +827,46 @@
 </div>
             <div id="toast"></div>
          </div>
-    
+    <!-- نافذة المراسلة المنبثقة -->
+<div id="contact-modal" class="modal-overlay">
+    <div class="contact-modal-box">
+        <button class="modal-close" type="button" onclick="closeContactModal()">×</button>
+        <h2 style="text-align:center; color:#008e7e; margin-bottom:20px; margin-top:0;">تواصل معنا</h2>
+        
+        <form id="contactForm" onsubmit="submitContactForm(event)">
+            <input type="hidden" name="access_key" value="54190f55-c3e4-41b4-b772-9a62ae475b49">
+            <input type="hidden" name="subject" value="رسالة جديدة من أداة دمج جدول المحاضرات">
+            
+            <div class="contact-form-group">
+                <label>جهة العمل</label>
+                <input type="text" name="جهة العمل" required placeholder="مثال: الكلية التقنية بـ...">
+            </div>
+            
+            <div class="contact-form-group">
+                <label>وسيلة التواصل</label>
+                <input type="text" name="وسيلة التواصل" required placeholder="البريد الإلكتروني أو رقم الجوال">
+            </div>
+            
+            <div class="contact-form-group">
+                <label>نوع الرسالة</label>
+                <select name="نوع الرسالة">
+                    <option value="اقتراح">اقتراح تطوير</option>
+                    <option value="مشكلة">الإبلاغ عن مشكلة</option>
+                    <option value="استفسار">استفسار</option>
+                    <option value="أخرى">أخرى</option>
+                </select>
+            </div>
+            
+            <div class="contact-form-group">
+                <label>نص الرسالة</label>
+                <textarea name="الرسالة" required rows="4" placeholder="نأمل كتابة رسالتك أو ملاحظتك هنا..."></textarea>
+            </div>
+            
+            <button type="submit" class="btn-process" id="contact_submit_btn">إرسال الرسالة</button>
+            <div id="contact_status" style="margin-top:15px; text-align:center; font-weight:600; font-size:14px;"></div>
+        </form>
+    </div>
+</div>
     <script>
 
         
@@ -1888,48 +1941,5 @@ async function submitContactForm(e) {
     }
 }
     </script>
-    
-  <!-- نافذة المراسلة المنبثقة -->
-<div id="contact-modal" class="modal-overlay">
-    <div class="modal-box" style="max-width: 500px;">
-        <button class="modal-close" onclick="closeContactModal()">×</button>
-        <h2 style="text-align:center; color:#008e7e; margin-bottom:20px; margin-top:0;">تواصل معنا</h2>
-        
-        <form id="contactForm" onsubmit="submitContactForm(event)">
-            <input type="hidden" name="access_key" value="54190f55-c3e4-41b4-b772-9a62ae475b49">
-            <input type="hidden" name="subject" value="رسالة جديدة من أدوات رايات">
-            
-            <div class="contact-form-group">
-                <label>جهة العمل</label>
-                <input type="text" name="جهة العمل" required placeholder="مثال: الكلية التقنية بـ...">
-            </div>
-            
-            <div class="contact-form-group">
-                <label>وسيلة التواصل</label>
-                <input type="text" name="وسيلة التواصل" required placeholder="البريد الإلكتروني أو رقم الجوال للتواصل معك">
-            </div>
-            
-            <div class="contact-form-group">
-                <label>نوع الرسالة</label>
-                <select name="نوع الرسالة">
-                    <option value="اقتراح">اقتراح تطوير</option>
-                    <option value="مشكلة">الإبلاغ عن مشكلة</option>
-                    <option value="استفسار">استفسار</option>
-                    <option value="أخرى">أخرى</option>
-                </select>
-            </div>
-            
-            <div class="contact-form-group">
-                <label>نص الرسالة</label>
-                <textarea name="الرسالة" required rows="4" placeholder="نأمل كتابة رسالتك أو ملاحظتك هنا..."></textarea>
-            </div>
-            
-            <button type="submit" class="btn-process" id="contact_submit_btn">إرسال الرسالة</button>
-            <div id="contact_status" style="margin-top:15px; text-align:center; font-weight:600; font-size:14px;"></div>
-        </form>
-    </div>
-</div>
-
-
 </body>
 </html>
