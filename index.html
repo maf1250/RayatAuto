@@ -827,46 +827,6 @@
 </div>
             <div id="toast"></div>
          </div>
-    <!-- نافذة المراسلة المنبثقة -->
-<div id="contact-modal" class="modal-overlay">
-    <div class="contact-modal-box">
-        <button class="modal-close" type="button" onclick="closeContactModal()">×</button>
-        <h2 style="text-align:center; color:#008e7e; margin-bottom:20px; margin-top:0;">تواصل معنا</h2>
-        
-        <form id="contactForm" onsubmit="submitContactForm(event)">
-            <input type="hidden" name="access_key" value="54190f55-c3e4-41b4-b772-9a62ae475b49">
-            <input type="hidden" name="subject" value="رسالة جديدة من أداة دمج جدول المحاضرات">
-            
-            <div class="contact-form-group">
-                <label>جهة العمل</label>
-                <input type="text" name="جهة العمل" required placeholder="مثال: الكلية التقنية بـ...">
-            </div>
-            
-            <div class="contact-form-group">
-                <label>وسيلة التواصل</label>
-                <input type="text" name="وسيلة التواصل" required placeholder="البريد الإلكتروني أو رقم الجوال">
-            </div>
-            
-            <div class="contact-form-group">
-                <label>نوع الرسالة</label>
-                <select name="نوع الرسالة">
-                    <option value="اقتراح">اقتراح تطوير</option>
-                    <option value="مشكلة">الإبلاغ عن مشكلة</option>
-                    <option value="استفسار">استفسار</option>
-                    <option value="أخرى">أخرى</option>
-                </select>
-            </div>
-            
-            <div class="contact-form-group">
-                <label>نص الرسالة</label>
-                <textarea name="الرسالة" required rows="4" placeholder="نأمل كتابة رسالتك أو ملاحظتك هنا..."></textarea>
-            </div>
-            
-            <button type="submit" class="btn-process" id="contact_submit_btn">إرسال الرسالة</button>
-            <div id="contact_status" style="margin-top:15px; text-align:center; font-weight:600; font-size:14px;"></div>
-        </form>
-    </div>
-</div>
     <script>
 
         
@@ -1941,5 +1901,45 @@ async function submitContactForm(e) {
     }
 }
     </script>
+    <!-- نافذة المراسلة المنبثقة -->
+<div id="contact-modal" class="modal-overlay" style="display: none;">
+    <div class="contact-modal-box">
+        <button class="modal-close" type="button" onclick="closeContactModal()">×</button>
+        <h2 style="text-align:center; color:#008e7e; margin-bottom:20px; margin-top:0;">تواصل معنا</h2>
+        
+        <form id="contactForm" onsubmit="submitContactForm(event)">
+            <input type="hidden" name="access_key" value="54190f55-c3e4-41b4-b772-9a62ae475b49">
+            <input type="hidden" name="subject" value="رسالة جديدة من أداة دمج جداول المحاضرات">
+            
+            <div class="contact-form-group">
+                <label>جهة العمل</label>
+                <input type="text" name="جهة العمل" required placeholder="مثال: الكلية التقنية بـ...">
+            </div>
+            
+            <div class="contact-form-group">
+                <label>وسيلة التواصل</label>
+                <input type="text" name="وسيلة التواصل" required placeholder="البريد الإلكتروني أو رقم الجوال">
+            </div>
+            
+            <div class="contact-form-group">
+                <label>نوع الرسالة</label>
+                <select name="نوع الرسالة">
+                    <option value="اقتراح">اقتراح تطوير</option>
+                    <option value="مشكلة">الإبلاغ عن مشكلة</option>
+                    <option value="استفسار">استفسار</option>
+                    <option value="أخرى">أخرى</option>
+                </select>
+            </div>
+            
+            <div class="contact-form-group">
+                <label>نص الرسالة</label>
+                <textarea name="الرسالة" required rows="4" placeholder="نأمل كتابة رسالتك أو ملاحظتك هنا..."></textarea>
+            </div>
+            
+            <button type="submit" class="btn-process" id="contact_submit_btn">إرسال الرسالة</button>
+            <div id="contact_status" style="margin-top:15px; text-align:center; font-weight:600; font-size:14px;"></div>
+        </form>
+    </div>
+</div>
 </body>
 </html>
