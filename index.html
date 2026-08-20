@@ -562,18 +562,23 @@
     box-shadow: 0 0 8px rgba(0, 142, 126, 0.3); border-color: #008e7e;
 }
         
-/* تنسيق صندوق المراسلة المنفصل */
+/* تنسيق صندوق المراسلة المنفصل  */
 .contact-modal-box {
     background: #f4f9f8; 
     border-radius: 12px; 
     padding: 25px;
     width: 90%; 
-    max-width: 450px; /* عرض مناسب للمراسلة */
-    position: relative; 
+    max-width: 450px; 
     box-shadow: 0 10px 30px rgba(0,0,0,0.2); 
     border: 2px solid #008e7e;
     max-height: 90vh;
     overflow-y: auto;
+    
+    /* التوسيط  في منتصف الشاشة */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }
         
   /* تلوين خلفية الخلية الفارغة باللون الأحمر */
@@ -1846,7 +1851,7 @@ async function processFiles() {
         
 // فتح نافذة المراسلة
 function openContactModal() {
-    document.getElementById('contact-modal').style.display = 'flex';
+    document.getElementById('contact-modal').style.display = 'block';
 }
 
 // إغلاق نافذة المراسلة
