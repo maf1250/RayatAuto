@@ -540,6 +540,55 @@
             outline: none;
         }
 
+        /* تنسيق الخلايا المتعارضة */
+.conflict-cell {
+    background-color: #ffebee !important;
+    border: 2px solid #f44336 !important;
+    color: #d32f2f;
+    font-weight: bold;
+}
+.conflict-cell::after {
+    content: " ⚠️ تعارض";
+    font-size: 10px;
+}
+
+/* تنسيق الخلية غير القابلة للتعديل (المبنى) */
+.readonly-cell {
+    background-color: #f1f1f1;
+    color: #777;
+    cursor: not-allowed;
+}
+
+/* تنسيق نافذة التأكيد (المودال) */
+.custom-modal-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6); z-index: 2000;
+    display: none; justify-content: center; align-items: center;
+}
+.custom-modal-box {
+    background: #fff; width: 90%; max-width: 500px;
+    border-radius: 10px; padding: 25px; box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+    text-align: right;
+}
+.custom-modal-title {
+    color: #008e7e; font-size: 18px; font-weight: bold; margin-bottom: 15px;
+    display: flex; align-items: center; gap: 8px;
+}
+.custom-modal-title.error-title { color: #d32f2f; }
+.custom-modal-buttons {
+    display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;
+}
+.btn-sm { padding: 8px 15px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; }
+.btn-confirm { background: #008e7e; color: white; }
+.btn-cancel { background: #dc3545; color: white; }
+
+/* سجل الملاحظات أسفل الجدول */
+#propagation-logs {
+    margin-top: 15px; background: #fff3cd; border: 1px solid #ffeeba;
+    padding: 15px; border-radius: 8px; display: none; color: #856404;
+    font-size: 13px; font-weight: 600;
+}
+#propagation-logs ul { margin: 5px 0 0; padding-inline-start: 20px; }
         
 /* زر المراسلة */
 
@@ -1538,144 +1587,268 @@ async function processFiles() {
             }
         }
 
-     // دالة رسم الجدول النهائي (مدمجة للعرضي والطولي)
-        function renderResultsTable() {
-            const container = document.querySelector('.table-responsive');
-            const filterValue = document.getElementById('data-filter').value;
-            let dataToShow = globalFinalData;
+    // --- دالة فحص تداخل الأوقات ---
+function checkTimeOverlap(time1, time2) {
+    if (!time1 || !time2) return false;
+    
+    function parseTimeStr(t) {
+        let parts = t.split('-');
+        if (parts.length !== 2) return null;
+        let sStr = parts[0].replace(':', '').trim();
+        let eStr = parts[1].replace(':', '').trim();
+        let s = parseInt(sStr.substring(0, sStr.length - 2)) * 60 + parseInt(sStr.substring(sStr.length - 2));
+        let e = parseInt(eStr.substring(0, eStr.length - 2)) * 60 + parseInt(eStr.substring(eStr.length - 2));
+        return { start: s, end: e };
+    }
 
-            // --- 1. إذا كان التبويب هو "الكل" (جدول طولي عادي) ---
-           // --- 1. إذا كان التبويب هو "الكل" (جدول طولي عادي وقابل للتعديل) ---
-            if (currentTab === 'all') {
-                let html = `
-                <div class="edit-hint">
-                    <i data-lucide="edit-3"></i> 
-                    ميزة ذكية: الخلايا المظللة باللون الأصفر (المرجعي، المبنى، القاعة، رقم المدرب) يمكنك النقر عليها وتعديلها مباشرة قبل النسخ!
-                </div>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>المرجعي</th>
-                            <th>المقرر</th>
-                            <th>الشعبة</th>
-                            <th>اليوم</th>
-                            <th>الوقت</th>
-                            <th>المبنى</th>
-                            <th>القاعة</th>
-                            <th>رقم المدرب</th>
-                            <th>المدرب</th>
-                            <th>النوع</th>
-                        </tr>
-                    </thead>
-                    <tbody>`;
-                
-                if(dataToShow.length === 0) {
-                    html += `<tr><td colspan="10" style="padding:20px; color:#666;">لا توجد بيانات</td></tr>`;
-                } else {
-                    dataToShow.forEach((row, index) => {
-                        let badgeClass = row["نوع المحاضرة"] === 'عملي' ? 'badge-prac' : 'badge-theory';
-                        html += `
-                            <tr>
-                                <td class="editable-cell" contenteditable="true" onblur="updateCellData(${index}, 'الرقم المرجعي', this)">${row["الرقم المرجعي"] || ''}</td>
-                                <td>${row["اسم المقرر"] || '-'}</td>
-                                <td>${row["الشعبة"] || '-'}</td>
-                                <td>${row["اليوم"] || '-'}</td>
-                                <td dir="ltr">${row["الوقت"] || '-'}</td>
-                                <td class="editable-cell" contenteditable="true" onblur="updateCellData(${index}, 'المبنى', this)">${row["المبنى"] || ''}</td>
-                                <td class="editable-cell" contenteditable="true" onblur="updateCellData(${index}, 'القاعة', this)">${row["القاعة"] || ''}</td>
-                                <td class="editable-cell" contenteditable="true" onblur="updateCellData(${index}, 'رقم المدرب', this)">${row["رقم المدرب"] || ''}</td>
-                                <td>${row["اسم المدرب"] || '-'}</td>
-                                <td><span class="lec-badge ${badgeClass}">${row["نوع المحاضرة"] || '-'}</span></td>
-                            </tr>
-                        `;
-                    });
+    let t1 = parseTimeStr(time1);
+    let t2 = parseTimeStr(time2);
+    if (!t1 || !t2) return false;
+
+    // يوجد تداخل إذا كان: بداية الأول < نهاية الثاني ، وبداية الثاني < نهاية الأول
+    return (t1.start < t2.end && t2.start < t1.end);
+}
+
+// --- دالة البحث عن تعارض في القاعات ---
+function findRoomConflict(day, time, room, excludeTeacher, excludeIndex) {
+    if (!room || room === "") return null;
+    for (let i = 0; i < globalFinalData.length; i++) {
+        if (i === excludeIndex) continue;
+        let r = globalFinalData[i];
+        if (r["اليوم"] === day && r["القاعة"] === room) {
+            if (checkTimeOverlap(time, r["الوقت"])) {
+                // نعتبره تعارض إذا كان مدرب آخر
+                if (r["اسم المدرب"] !== excludeTeacher) {
+                    return r;
                 }
-                html += `</tbody></table>`;
-                container.innerHTML = html;
-                lucide.createIcons();
-                return;
             }
-
-            // --- 2. إذا كان التبويب "مدرب" أو "شعبة" (رسم جدول عرضي - Timetable) ---
-            if (!filterValue) {
-                container.innerHTML = '<table class="data-table"><tbody><tr><td style="padding: 30px; color: #666; text-align:center; font-size:15px;"><i data-lucide="filter" style="vertical-align:middle;"></i> الرجاء الاختيار من القائمة أعلاه لعرض الجدول الأسبوعي</td></tr></tbody></table>';
-                lucide.createIcons();
-                return;
-            }
-
-            if (currentTab === 'trainer') {
-                dataToShow = dataToShow.filter(item => item["اسم المدرب"] === filterValue);
-            } else if (currentTab === 'section') {
-                dataToShow = dataToShow.filter(item => item["الشعبة"] === filterValue);
-            }
-
-            const days = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس"];
-            
-            // بناء رأس الجدول العرضي
-            let html = `
-            <table class="timetable">
-                <thead>
-                    <tr>
-                        <th class="day-col">اليوم</th>
-                        ${[...Array(10)].map((_, i) => `<th>م ${i+1}</th>`).join('')}
-                    </tr>
-                </thead>
-                <tbody>`;
-
-            // بناء صفوف الأيام
-            days.forEach(day => {
-                html += `<tr><td class="day-col">${day}</td>`;
-                
-                let dayLectures = dataToShow.filter(r => r["اليوم"] === day);
-                let p = 1;
-                
-                while (p <= 10) {
-                    // البحث عن محاضرة تبدأ في هذه الحصة
-                    let lec = dayLectures.find(r => r.startP === p);
-                    
-                    if (lec) {
-                        let colspan = lec.endP - lec.startP + 1; // كم حصة تأخذ هذه المحاضرة؟
-                        let isPrac = lec["نوع المحاضرة"] === 'عملي';
-                        let cssClass = isPrac ? 'lec-practical' : 'lec-theory';
-                        
-                        // تجهيز المتغيرات للجدول
-                        let extraInfo = currentTab === 'trainer' ? lec["الشعبة"] || '-' : lec["اسم المدرب"] || '-';
-                        let crn = lec["الرقم المرجعي"] || '-';
-                        let room = lec["القاعة"] || '-';
-                        
-                        // نص التلميح (يظهر عند مرور الماوس)
-                        let tooltipText = `المقرر: ${lec["اسم المقرر"]}\n${currentTab === 'trainer' ? 'الشعبة' : 'المدرب'}: ${extraInfo}\nالقاعة: ${room}\nالمرجعي: ${crn}\nالوقت: ${lec["الوقت"]}`;
-
-                        html += `
-                        <td colspan="${colspan}">
-                            <div class="lec-box ${cssClass}" 
-                                 title="${tooltipText}" 
-                                 data-crn="${crn}"
-                                 onmouseenter="highlightCRN('${crn}')"
-                                 onmouseleave="removeHighlightCRN()">
-                                <div class="lec-title">${lec["اسم المقرر"]}</div>
-                                <div class="lec-details">
-                                    <div class="truncate-text">${extraInfo}</div>
-                                    <div class="bottom-info">
-                                        <span class="room-text">${room}</span>
-                                        <span class="crn-badge">${crn}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </td>`;
-                        p += colspan; // القفز بعدد الحصص المدمجة
-                    } else {
-                        // لا توجد محاضرة هنا، اطبع خلية فارغة
-                        html += `<td></td>`;
-                        p++;
-                    }
-                }
-                html += `</tr>`;
-            });
-
-            html += `</tbody></table>`;
-            container.innerHTML = html;
         }
+    }
+    return null;
+}
+
+// --- الدالة المحدثة لرسم الجدول ---
+function renderResultsTable() {
+    const container = document.querySelector('.table-responsive');
+    const filterValue = document.getElementById('data-filter').value;
+    let dataToShow = globalFinalData;
+
+    // إدراج حاوية الملاحظات (السجل)
+    if (!document.getElementById('propagation-logs-container')) {
+        let logsDiv = document.createElement('div');
+        logsDiv.id = 'propagation-logs-container';
+        logsDiv.innerHTML = `<div id="propagation-logs"><strong><i data-lucide="info"></i> ملاحظات النظام:</strong><ul id="logs-list"></ul></div>`;
+        container.parentElement.insertBefore(logsDiv, container.nextSibling);
+    }
+
+    if (currentTab === 'all') {
+        let html = `
+        <div class="edit-hint">
+            <i data-lucide="edit-3"></i> 
+            المرجعي، القاعة، ورقم المدرب قابلة للتعديل. سيتم استخراج المبنى تلقائياً وسيتم تنبيهك عند وجود تعارض!
+        </div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>المرجعي</th>
+                    <th>المقرر</th>
+                    <th>الشعبة</th>
+                    <th>اليوم</th>
+                    <th>الوقت</th>
+                    <th>المبنى</th>
+                    <th>القاعة</th>
+                    <th>رقم المدرب</th>
+                    <th>المدرب</th>
+                    <th>النوع</th>
+                </tr>
+            </thead>
+            <tbody>`;
+        
+        if(dataToShow.length === 0) {
+            html += `<tr><td colspan="10" style="padding:20px; color:#666;">لا توجد بيانات</td></tr>`;
+        } else {
+            dataToShow.forEach((row, index) => {
+                let badgeClass = row["نوع المحاضرة"] === 'عملي' ? 'badge-prac' : 'badge-theory';
+                let realIndex = globalFinalData.indexOf(row); // الأندكس الحقيقي
+                
+                // فحص التعارض المسبق لتلوين الخلية
+                let hasConflict = findRoomConflict(row["اليوم"], row["الوقت"], row["القاعة"], row["اسم المدرب"], realIndex);
+                let roomClass = hasConflict ? "editable-cell conflict-cell" : "editable-cell";
+                let roomTitle = hasConflict ? `مستخدمة من: ${hasConflict["اسم المدرب"]}` : "";
+
+                html += `
+                    <tr>
+                        <td class="editable-cell" contenteditable="true" onblur="updateCellData(${realIndex}, 'الرقم المرجعي', this)">${row["الرقم المرجعي"] || ''}</td>
+                        <td>${row["اسم المقرر"] || '-'}</td>
+                        <td>${row["الشعبة"] || '-'}</td>
+                        <td>${row["اليوم"] || '-'}</td>
+                        <td dir="ltr">${row["الوقت"] || '-'}</td>
+                        
+                        <!-- المبنى غير قابل للتعديل ومعرف بـ ID لتحديثه فوراً -->
+                        <td class="readonly-cell" id="bld-cell-${realIndex}">${row["المبنى"] || ''}</td>
+                        
+                        <!-- القاعة مزودة بدالة مخصصة -->
+                        <td class="${roomClass}" title="${roomTitle}" contenteditable="true" 
+                            onfocus="this.dataset.old=this.innerText" 
+                            onblur="handleRoomChange(${realIndex}, this)">${row["القاعة"] || ''}</td>
+                            
+                        <td class="editable-cell" contenteditable="true" onblur="updateCellData(${realIndex}, 'رقم المدرب', this)">${row["رقم المدرب"] || ''}</td>
+                        <td>${row["اسم المدرب"] || '-'}</td>
+                        <td><span class="lec-badge ${badgeClass}">${row["نوع المحاضرة"] || '-'}</span></td>
+                    </tr>
+                `;
+            });
+        }
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+        lucide.createIcons();
+        return;
+    }
+
+    // --- بقية الكود الخاص بالجدول العرضي (التبويبات الأخرى) يبقى كما هو بدون تغيير ---
+    if (!filterValue) {
+        container.innerHTML = '<table class="data-table"><tbody><tr><td style="padding: 30px; color: #666; text-align:center; font-size:15px;"><i data-lucide="filter" style="vertical-align:middle;"></i> الرجاء الاختيار من القائمة أعلاه لعرض الجدول الأسبوعي</td></tr></tbody></table>';
+        lucide.createIcons();
+        return;
+    }
+
+    if (currentTab === 'trainer') {
+        dataToShow = dataToShow.filter(item => item["اسم المدرب"] === filterValue);
+    } else if (currentTab === 'section') {
+        dataToShow = dataToShow.filter(item => item["الشعبة"] === filterValue);
+    }
+
+    const days = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس"];
+    let html = `
+    <table class="timetable">
+        <thead><tr><th class="day-col">اليوم</th>${[...Array(10)].map((_, i) => `<th>م ${i+1}</th>`).join('')}</tr></thead>
+        <tbody>`;
+
+    days.forEach(day => {
+        html += `<tr><td class="day-col">${day}</td>`;
+        let dayLectures = dataToShow.filter(r => r["اليوم"] === day);
+        let p = 1;
+        while (p <= 10) {
+            let lec = dayLectures.find(r => r.startP === p);
+            if (lec) {
+                let colspan = lec.endP - lec.startP + 1;
+                let isPrac = lec["نوع المحاضرة"] === 'عملي';
+                let cssClass = isPrac ? 'lec-practical' : 'lec-theory';
+                let extraInfo = currentTab === 'trainer' ? lec["الشعبة"] || '-' : lec["اسم المدرب"] || '-';
+                let crn = lec["الرقم المرجعي"] || '-';
+                let room = lec["القاعة"] || '-';
+                
+                let tooltipText = `المقرر: ${lec["اسم المقرر"]}\n${currentTab === 'trainer' ? 'الشعبة' : 'المدرب'}: ${extraInfo}\nالقاعة: ${room}\nالمرجعي: ${crn}\nالوقت: ${lec["الوقت"]}`;
+
+                html += `<td colspan="${colspan}"><div class="lec-box ${cssClass}" title="${tooltipText}" data-crn="${crn}" onmouseenter="highlightCRN('${crn}')" onmouseleave="removeHighlightCRN()"><div class="lec-title">${lec["اسم المقرر"]}</div><div class="lec-details"><div class="truncate-text">${extraInfo}</div><div class="bottom-info"><span class="room-text">${room}</span><span class="crn-badge">${crn}</span></div></div></div></td>`;
+                p += colspan;
+            } else {
+                html += `<td></td>`;
+                p++;
+            }
+        }
+        html += `</tr>`;
+    });
+    html += `</tbody></table>`;
+    container.innerHTML = html;
+}
+
+// --- معالجة تغيير القاعة وإدارة التعارض ---
+function handleRoomChange(index, cellElement) {
+    let newRoom = cellElement.innerText.trim();
+    let oldRoom = cellElement.dataset.old || "";
+    if (newRoom === oldRoom) return;
+
+    let row = globalFinalData[index];
+
+    // إذا تم مسح القاعة
+    if (newRoom === "") {
+        row["القاعة"] = "";
+        row["المبنى"] = "";
+        document.getElementById(`bld-cell-${index}`).innerText = "";
+        updateMissingStats();
+        cellElement.dataset.old = "";
+        return;
+    }
+
+    // فحص التعارض الفوري
+    let conflict = findRoomConflict(row["اليوم"], row["الوقت"], newRoom, row["اسم المدرب"], index);
+    if (conflict) {
+        document.getElementById('conflict-msg').innerHTML = `القاعة <strong>${newRoom}</strong> مستخدمة مسبقاً!<br>المدرب: ${conflict["اسم المدرب"]}<br>المرجعي: ${conflict["الرقم المرجعي"] || 'غير محدد'}<br>الوقت: ${conflict["الوقت"]}`;
+        document.getElementById('conflict-alert-modal').style.display = 'flex';
+        // التراجع عن الإدخال
+        cellElement.innerText = oldRoom;
+        return;
+    }
+
+    // تحديث البيانات إذا لم يكن هناك تعارض
+    let newBld = newRoom.length >= 5 ? newRoom.substring(0, 5) : newRoom;
+    row["القاعة"] = newRoom;
+    row["المبنى"] = newBld;
+    
+    // تحديث واجهة المستخدم فوراً
+    document.getElementById(`bld-cell-${index}`).innerText = newBld;
+    cellElement.dataset.old = newRoom;
+    updateMissingStats();
+
+    // إزالة كلاس التعارض إن وجد
+    cellElement.classList.remove('conflict-cell');
+
+    // عرض مودال النسخ لبقية مقررات المدرب
+    if (row["اسم المدرب"]) {
+        let teacherCoursesCount = globalFinalData.filter((r, i) => r["اسم المدرب"] === row["اسم المدرب"] && i !== index).length;
+        if (teacherCoursesCount > 0) {
+            document.getElementById('propagate-msg').innerHTML = `هل ترغب بتطبيق القاعة <strong>${newRoom}</strong> على جميع مقررات المدرب (<strong>${row["اسم المدرب"]}</strong>)؟<br><br><span style='font-size:12px; color:#666;'>ملاحظة: النظام سيتجاهل القاعة إذا كان هناك تعارض في نفس الوقت.</span>`;
+            
+            let propModal = document.getElementById('propagate-modal');
+            propModal.style.display = 'flex';
+            
+            // تعيين وظيفة الزر (باستخدام onclick لتفادي التكرار)
+            document.getElementById('confirm-propagate-btn').onclick = function() {
+                executePropagation(row["اسم المدرب"], newRoom, newBld, index);
+                closeCustomModal('propagate-modal');
+            };
+        }
+    }
+}
+
+function closeCustomModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+}
+
+function executePropagation(teacherName, roomCode, bldCode, triggerIndex) {
+    let logs = [];
+    let updatedCount = 0;
+
+    globalFinalData.forEach((row, i) => {
+        if (row["اسم المدرب"] === teacherName && i !== triggerIndex) {
+            let conflict = findRoomConflict(row["اليوم"], row["الوقت"], roomCode, teacherName, i);
+            if (conflict) {
+                logs.push(`<li>لم يتم الإضافة لـ (${row["اسم المقرر"]} - الشعبة ${row["الشعبة"]}) يوم ${row["اليوم"]} بسبب تعارض مع ${conflict["اسم المدرب"]}.</li>`);
+            } else {
+                row["القاعة"] = roomCode;
+                row["المبنى"] = bldCode;
+                updatedCount++;
+            }
+        }
+    });
+
+    // إعادة رسم الجدول لتطبيق التحديثات وإظهار التعارضات المسبقة إن وجدت
+    renderResultsTable();
+    updateMissingStats();
+
+    // عرض سجل الملاحظات
+    let logsContainer = document.getElementById('propagation-logs');
+    let logsList = document.getElementById('logs-list');
+    
+    if (updatedCount > 0 || logs.length > 0) {
+        logsContainer.style.display = 'block';
+        let successMsg = `<li>تم تحديث القاعة لعدد (${updatedCount}) محاضرة تابعة للمدرب.</li>`;
+        logsList.innerHTML = successMsg + logs.join('');
+        
+        showToast(`<i data-lucide="check-circle"></i> تم تحديث القاعات بنجاح`);
+    }
+}
         
         // دالة إظهار التوست (Toast)
         function showToast(message, isError = false) {
@@ -1937,10 +2110,30 @@ async function submitContactForm(e) {
                 <label>نص الرسالة</label>
                 <textarea name="الرسالة" required rows="4" placeholder="نأمل كتابة رسالتك أو ملاحظتك هنا..."></textarea>
             </div>
-            
             <button type="submit" class="btn-process" id="contact_submit_btn">إرسال الرسالة</button>
             <div id="contact_status" style="margin-top:15px; text-align:center; font-weight:600; font-size:14px;"></div>
         </form>
+    </div>
+</div>
+    <!-- نافذة التعارض الفوري -->
+<div id="conflict-alert-modal" class="custom-modal-overlay">
+    <div class="custom-modal-box">
+        <div class="custom-modal-title error-title"><i data-lucide="alert-octagon"></i> تعارض في القاعة!</div>
+        <p id="conflict-msg"></p>
+        <div class="custom-modal-buttons">
+            <button class="btn-sm btn-cancel" onclick="closeCustomModal('conflict-alert-modal')">حسناً، فهمت</button>
+        </div>
+    </div>
+</div>
+<!-- نافذة نسخ القاعة للمدرب -->
+<div id="propagate-modal" class="custom-modal-overlay">
+    <div class="custom-modal-box">
+        <div class="custom-modal-title"><i data-lucide="copy"></i> تعميم القاعة للمدرب</div>
+        <p id="propagate-msg"></p>
+        <div class="custom-modal-buttons">
+            <button class="btn-sm btn-confirm" id="confirm-propagate-btn">نعم، تعميم القاعة</button>
+            <button class="btn-sm btn-cancel" onclick="closeCustomModal('propagate-modal')">لا، لهذه الشعبة فقط</button>
+        </div>
     </div>
 </div>
 </body>
