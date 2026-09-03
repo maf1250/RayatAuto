@@ -1627,7 +1627,15 @@ function findRoomConflict(day, time, room, excludeTeacher, excludeIndex) {
     return null;
 }
 
-// --- الدالة المحدثة لرسم الجدول ---
+        // دالة لالتقاط زر Enter وإلغاء التركيز (لحفظ البيانات)
+function handleEnterKey(event, cellElement) {
+    if (event.key === 'Enter') {
+        event.preventDefault(); // منع نزول سطر جديد
+        cellElement.blur(); // إلغاء التركيز مما يؤدي لتشغيل دوال الحفظ (onblur) تلقائياً
+    }
+}
+
+        // --- الدالة المحدثة لرسم الجدول (تتضمن زر Enter) ---
 function renderResultsTable() {
     const container = document.querySelector('.table-responsive');
     const filterValue = document.getElementById('data-filter').value;
@@ -1645,7 +1653,7 @@ function renderResultsTable() {
         let html = `
         <div class="edit-hint">
             <i data-lucide="edit-3"></i> 
-            المرجعي، القاعة، ورقم المدرب قابلة للتعديل. سيتم استخراج المبنى تلقائياً وسيتم تنبيهك عند وجود تعارض!
+            المرجعي، القاعة، ورقم المدرب قابلة للتعديل. سيتم استخراج المبنى تلقائياً، واضغط (Enter) للحفظ السريع!
         </div>
         <table class="data-table">
             <thead>
@@ -1678,21 +1686,26 @@ function renderResultsTable() {
 
                 html += `
                     <tr>
-                        <td class="editable-cell" contenteditable="true" onblur="updateCellData(${realIndex}, 'الرقم المرجعي', this)">${row["الرقم المرجعي"] || ''}</td>
+                        <td class="editable-cell" contenteditable="true" 
+                            onkeydown="handleEnterKey(event, this)" 
+                            onblur="updateCellData(${realIndex}, 'الرقم المرجعي', this)">${row["الرقم المرجعي"] || ''}</td>
                         <td>${row["اسم المقرر"] || '-'}</td>
                         <td>${row["الشعبة"] || '-'}</td>
                         <td>${row["اليوم"] || '-'}</td>
                         <td dir="ltr">${row["الوقت"] || '-'}</td>
                         
-                        <!-- المبنى غير قابل للتعديل ومعرف بـ ID لتحديثه فوراً -->
+                        <!-- المبنى غير قابل للتعديل -->
                         <td class="readonly-cell" id="bld-cell-${realIndex}">${row["المبنى"] || ''}</td>
                         
-                        <!-- القاعة مزودة بدالة مخصصة -->
+                        <!-- القاعة -->
                         <td class="${roomClass}" title="${roomTitle}" contenteditable="true" 
+                            onkeydown="handleEnterKey(event, this)"
                             onfocus="this.dataset.old=this.innerText" 
                             onblur="handleRoomChange(${realIndex}, this)">${row["القاعة"] || ''}</td>
                             
-                        <td class="editable-cell" contenteditable="true" onblur="updateCellData(${realIndex}, 'رقم المدرب', this)">${row["رقم المدرب"] || ''}</td>
+                        <td class="editable-cell" contenteditable="true" 
+                            onkeydown="handleEnterKey(event, this)"
+                            onblur="updateCellData(${realIndex}, 'رقم المدرب', this)">${row["رقم المدرب"] || ''}</td>
                         <td>${row["اسم المدرب"] || '-'}</td>
                         <td><span class="lec-badge ${badgeClass}">${row["نوع المحاضرة"] || '-'}</span></td>
                     </tr>
@@ -1705,7 +1718,7 @@ function renderResultsTable() {
         return;
     }
 
-    // --- بقية الكود الخاص بالجدول العرضي (التبويبات الأخرى) يبقى كما هو بدون تغيير ---
+    // --- بقية الكود الخاص بالجدول العرضي (التبويبات الأخرى) ---
     if (!filterValue) {
         container.innerHTML = '<table class="data-table"><tbody><tr><td style="padding: 30px; color: #666; text-align:center; font-size:15px;"><i data-lucide="filter" style="vertical-align:middle;"></i> الرجاء الاختيار من القائمة أعلاه لعرض الجدول الأسبوعي</td></tr></tbody></table>';
         lucide.createIcons();
@@ -1753,75 +1766,81 @@ function renderResultsTable() {
     container.innerHTML = html;
 }
 
-// --- معالجة تغيير القاعة وإدارة التعارض ---
+// --- معالجة تغيير القاعة (مع النسخ التلقائي لنفس الشعبة) ---
 function handleRoomChange(index, cellElement) {
     let newRoom = cellElement.innerText.trim();
     let oldRoom = cellElement.dataset.old || "";
     if (newRoom === oldRoom) return;
 
     let row = globalFinalData[index];
+    let currentCRN = row["الرقم المرجعي"];
 
-    // إذا تم مسح القاعة
+    // 1. إذا تم مسح القاعة
     if (newRoom === "") {
-        row["القاعة"] = "";
-        row["المبنى"] = "";
-        document.getElementById(`bld-cell-${index}`).innerText = "";
+        // تفريغ القاعة للصف الحالي وكل الصفوف التي تحمل نفس الرقم المرجعي
+        globalFinalData.forEach((r, i) => {
+            if (i === index || (currentCRN && r["الرقم المرجعي"] === currentCRN)) {
+                r["القاعة"] = "";
+                r["المبنى"] = "";
+            }
+        });
+        renderResultsTable();
         updateMissingStats();
-        cellElement.dataset.old = "";
         return;
     }
 
-    // فحص التعارض الفوري
+    // 2. فحص التعارض الفوري
     let conflict = findRoomConflict(row["اليوم"], row["الوقت"], newRoom, row["اسم المدرب"], index);
     if (conflict) {
         document.getElementById('conflict-msg').innerHTML = `القاعة <strong>${newRoom}</strong> مستخدمة مسبقاً!<br>المدرب: ${conflict["اسم المدرب"]}<br>المرجعي: ${conflict["الرقم المرجعي"] || 'غير محدد'}<br>الوقت: ${conflict["الوقت"]}`;
         document.getElementById('conflict-alert-modal').style.display = 'flex';
-        // التراجع عن الإدخال
         cellElement.innerText = oldRoom;
         return;
     }
 
-    // تحديث البيانات إذا لم يكن هناك تعارض
+    // 3. تحديث البيانات للصف الحالي والصفوف المرتبطة بنفس المرجعي تلقائياً
     let newBld = newRoom.length >= 5 ? newRoom.substring(0, 5) : newRoom;
-    row["القاعة"] = newRoom;
-    row["المبنى"] = newBld;
     
-    // تحديث واجهة المستخدم فوراً
-    document.getElementById(`bld-cell-${index}`).innerText = newBld;
-    cellElement.dataset.old = newRoom;
+    globalFinalData.forEach((r, i) => {
+        if (i === index || (currentCRN && r["الرقم المرجعي"] === currentCRN)) {
+            r["القاعة"] = newRoom;
+            r["المبنى"] = newBld;
+        }
+    });
+
+    // إعادة رسم الجدول لتحديث كافة الصفوف المتأثرة
+    renderResultsTable();
     updateMissingStats();
 
-    // إزالة كلاس التعارض إن وجد
-    cellElement.classList.remove('conflict-cell');
-
-    // عرض مودال النسخ لبقية مقررات المدرب
+    // 4. عرض مودال النسخ لبقية مقررات المدرب (باستثناء المرجعي الذي تم تحديثه للتو)
     if (row["اسم المدرب"]) {
-        let teacherCoursesCount = globalFinalData.filter((r, i) => r["اسم المدرب"] === row["اسم المدرب"] && i !== index).length;
-        if (teacherCoursesCount > 0) {
-            document.getElementById('propagate-msg').innerHTML = `هل ترغب بتطبيق القاعة <strong>${newRoom}</strong> على جميع مقررات المدرب (<strong>${row["اسم المدرب"]}</strong>)؟<br><br><span style='font-size:12px; color:#666;'>ملاحظة: النظام سيتجاهل القاعة إذا كان هناك تعارض في نفس الوقت.</span>`;
+        let trainerCoursesCount = globalFinalData.filter((r, i) => 
+            r["اسم المدرب"] === row["اسم المدرب"] && 
+            r["الرقم المرجعي"] !== currentCRN
+        ).length;
+
+        if (trainerCoursesCount > 0) {
+            document.getElementById('propagate-msg').innerHTML = `هل ترغب بتطبيق القاعة <strong>${newRoom}</strong> على جميع مقررات المدرب (<strong>${row["اسم المدرب"]}</strong>) الأخرى؟<br><br><span style='font-size:12px; color:#666;'>ملاحظة: سيتم تجاهلها في حال وجود تعارض.</span>`;
             
             let propModal = document.getElementById('propagate-modal');
             propModal.style.display = 'flex';
             
-            // تعيين وظيفة الزر (باستخدام onclick لتفادي التكرار)
             document.getElementById('confirm-propagate-btn').onclick = function() {
-                executePropagation(row["اسم المدرب"], newRoom, newBld, index);
+                executePropagation(row["اسم المدرب"], newRoom, newBld, currentCRN);
                 closeCustomModal('propagate-modal');
             };
         }
     }
 }
 
-function closeCustomModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
-}
-
-function executePropagation(teacherName, roomCode, bldCode, triggerIndex) {
+// --- تنفيذ تعميم القاعة على المدرب ---
+function executePropagation(teacherName, roomCode, bldCode, excludeCRN) {
     let logs = [];
     let updatedCount = 0;
 
     globalFinalData.forEach((row, i) => {
-        if (row["اسم المدرب"] === teacherName && i !== triggerIndex) {
+        // نستثني المرجعي الذي قمنا بتحديثه تلقائياً في الخطوة السابقة
+        if (row["اسم المدرب"] === teacherName && row["الرقم المرجعي"] !== excludeCRN) {
             let conflict = findRoomConflict(row["اليوم"], row["الوقت"], roomCode, teacherName, i);
             if (conflict) {
                 logs.push(`<li>لم يتم الإضافة لـ (${row["اسم المقرر"]} - الشعبة ${row["الشعبة"]}) يوم ${row["اليوم"]} بسبب تعارض مع ${conflict["اسم المدرب"]}.</li>`);
@@ -1833,11 +1852,9 @@ function executePropagation(teacherName, roomCode, bldCode, triggerIndex) {
         }
     });
 
-    // إعادة رسم الجدول لتطبيق التحديثات وإظهار التعارضات المسبقة إن وجدت
     renderResultsTable();
     updateMissingStats();
 
-    // عرض سجل الملاحظات
     let logsContainer = document.getElementById('propagation-logs');
     let logsList = document.getElementById('logs-list');
     
@@ -1845,9 +1862,12 @@ function executePropagation(teacherName, roomCode, bldCode, triggerIndex) {
         logsContainer.style.display = 'block';
         let successMsg = `<li>تم تحديث القاعة لعدد (${updatedCount}) محاضرة تابعة للمدرب.</li>`;
         logsList.innerHTML = successMsg + logs.join('');
-        
         showToast(`<i data-lucide="check-circle"></i> تم تحديث القاعات بنجاح`);
     }
+}
+
+function closeCustomModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
 }
         
         // دالة إظهار التوست (Toast)
