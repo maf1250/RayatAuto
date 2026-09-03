@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" href="favicon.png" type="image/svg+xml">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>أداة دمج جداول المحاضرات الذكية</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
@@ -1781,7 +1782,7 @@ function renderResultsTable() {
     container.innerHTML = html;
 }
 
-// --- معالجة تغيير القاعة (مع النسخ التلقائي لنفس الشعبة) ---
+// --- معالجة تغيير القاعة (مع النسخ التلقائي لنفس الشعبة وفحص التعارض) ---
 function handleRoomChange(index, cellElement) {
     let newRoom = cellElement.innerText.trim();
     let oldRoom = cellElement.dataset.old || "";
@@ -1792,7 +1793,6 @@ function handleRoomChange(index, cellElement) {
 
     // 1. إذا تم مسح القاعة
     if (newRoom === "") {
-        // تفريغ القاعة للصف الحالي وكل الصفوف التي تحمل نفس الرقم المرجعي
         globalFinalData.forEach((r, i) => {
             if (i === index || (currentCRN && r["الرقم المرجعي"] === currentCRN)) {
                 r["القاعة"] = "";
@@ -1804,7 +1804,7 @@ function handleRoomChange(index, cellElement) {
         return;
     }
 
-    // 2. فحص التعارض الفوري
+    // 2. فحص التعارض الفوري (للخلية التي يكتب فيها المستخدم حالياً)
     let conflict = findRoomConflict(row["اليوم"], row["الوقت"], newRoom, row["اسم المدرب"], index);
     if (conflict) {
         document.getElementById('conflict-msg').innerHTML = `القاعة <strong>${newRoom}</strong> مستخدمة مسبقاً!<br>المدرب: ${conflict["اسم المدرب"]}<br>المرجعي: ${conflict["الرقم المرجعي"] || 'غير محدد'}<br>الوقت: ${conflict["الوقت"]}`;
@@ -1813,19 +1813,46 @@ function handleRoomChange(index, cellElement) {
         return;
     }
 
-    // 3. تحديث البيانات للصف الحالي والصفوف المرتبطة بنفس المرجعي تلقائياً
+    // 3. تحديث البيانات للصف الحالي والصفوف المرتبطة بنفس المرجعي تلقائياً (مع فحص كل يوم)
     let newBld = newRoom.length >= 5 ? newRoom.substring(0, 5) : newRoom;
-    
+    let sameCrnLogs = []; // لتخزين سجلات التعارض لأيام نفس الشعبة
+
     globalFinalData.forEach((r, i) => {
-        if (i === index || (currentCRN && r["الرقم المرجعي"] === currentCRN)) {
+        if (i === index) {
+            // تحديث الصف الحالي
             r["القاعة"] = newRoom;
             r["المبنى"] = newBld;
+        } else if (currentCRN && r["الرقم المرجعي"] === currentCRN) {
+            // قبل تعميم القاعة لباقي أيام نفس الشعبة، يجب فحص التعارض لذلك اليوم والوقت
+            let dayConflict = findRoomConflict(r["اليوم"], r["الوقت"], newRoom, r["اسم المدرب"], i);
+            
+            if (dayConflict) {
+                // إذا وجد تعارض، لا تقم بتحديث القاعة وسجل الملاحظة
+                let currentCrnText = r["الرقم المرجعي"] || "غير محدد";
+                let conflictCrnText = dayConflict["الرقم المرجعي"] || "غير محدد";
+                sameCrnLogs.push(`<li>لم يتم الإضافة لـ (${r["اسم المقرر"]} - شعبة ${r["الشعبة"]} - الرقم المرجعي: <strong>${currentCrnText}</strong>) يوم ${r["اليوم"]} بسبب تعارض مع المدرب ${dayConflict["اسم المدرب"]} (الرقم المرجعي: <strong>${conflictCrnText}</strong>).</li>`);
+            } else {
+                // إذا لم يوجد تعارض، قم بالتحديث
+                r["القاعة"] = newRoom;
+                r["المبنى"] = newBld;
+            }
         }
     });
 
     // إعادة رسم الجدول لتحديث كافة الصفوف المتأثرة
     renderResultsTable();
     updateMissingStats();
+
+    // إذا كان هناك أيام لنفس الشعبة لم يتم تحديثها بسبب التعارض، أظهرها في سجل الملاحظات
+    if (sameCrnLogs.length > 0) {
+        let logsContainer = document.getElementById('propagation-logs');
+        let logsList = document.getElementById('logs-list');
+        logsContainer.style.display = 'block';
+        
+        let warningMsg = `<li>⚠️ تم تحديث القاعة، لكن تم تجاهل بعض أيام نفس الشعبة لوجود تعارض:</li>`;
+        logsList.innerHTML = warningMsg + sameCrnLogs.join('');
+        showToast(`<i data-lucide="alert-triangle"></i> لم يتم النسخ لجميع أيام الشعبة لوجود تعارض`, true);
+    }
 
     // 4. عرض مودال النسخ لبقية مقررات المدرب (باستثناء المرجعي الذي تم تحديثه للتو)
     if (row["اسم المدرب"]) {
@@ -1854,14 +1881,14 @@ function executePropagation(teacherName, roomCode, bldCode, excludeCRN) {
     let updatedCount = 0;
 
     globalFinalData.forEach((row, i) => {
-        // نستثني المرجعي الذي قمنا بتحديثه تلقائياً في الخطوة السابقة
         if (row["اسم المدرب"] === teacherName && row["الرقم المرجعي"] !== excludeCRN) {
             let conflict = findRoomConflict(row["اليوم"], row["الوقت"], roomCode, teacherName, i);
             if (conflict) {
                 let currentCrnText = row["الرقم المرجعي"] || "غير محدد";
                 let conflictCrnText = conflict["الرقم المرجعي"] || "غير محدد";
 
-                logs.push(`<li>لم يتم الإضافة لـ (${row["اسم المقرر"]} - شعبة ${row["الشعبة"]} - الرقم المرجعي: <strong>${currentCrnText}</strong>) يوم ${row["اليوم"]} بسبب تعارض مع ${conflict["اسم المدرب"]} (الرقم المرجعي: <strong>${conflictCrnText}</strong>).</li>`);
+                // تمت إضافة كلمة "المدرب" هنا
+                logs.push(`<li>لم يتم الإضافة لـ (${row["اسم المقرر"]} - شعبة ${row["الشعبة"]} - الرقم المرجعي: <strong>${currentCrnText}</strong>) يوم ${row["اليوم"]} بسبب تعارض مع المدرب ${conflict["اسم المدرب"]} (الرقم المرجعي: <strong>${conflictCrnText}</strong>).</li>`);
             } else {
                 row["القاعة"] = roomCode;
                 row["المبنى"] = bldCode;
@@ -1876,11 +1903,19 @@ function executePropagation(teacherName, roomCode, bldCode, excludeCRN) {
     let logsContainer = document.getElementById('propagation-logs');
     let logsList = document.getElementById('logs-list');
     
+    let currentLogs = logsList.innerHTML; 
+    
     if (updatedCount > 0 || logs.length > 0) {
         logsContainer.style.display = 'block';
-        let successMsg = `<li>تم تحديث القاعة لعدد (${updatedCount}) محاضرة تابعة للمدرب.</li>`;
-        logsList.innerHTML = successMsg + logs.join('');
-        showToast(`<i data-lucide="check-circle"></i> تم تحديث القاعات بنجاح`);
+        let successMsg = updatedCount > 0 ? `<li>تم تحديث القاعة لعدد (${updatedCount}) محاضرة تابعة للمدرب.</li>` : '';
+        
+        if (!currentLogs.includes('تم تحديث القاعة، لكن تم تجاهل بعض أيام نفس الشعبة')) {
+            logsList.innerHTML = successMsg + logs.join('');
+        } else {
+            logsList.innerHTML = currentLogs + successMsg + logs.join('');
+        }
+        
+        showToast(`<i data-lucide="check-circle"></i> اكتملت عملية تعميم القاعات`);
     }
 }
 
@@ -2061,11 +2096,11 @@ async function downloadExcel(force = false) {
             });
         }
 
-    // دالة لتحديث عداد النواقص والتعارضات ديناميكياً
 function updateMissingStats() {
     let missingCount = 0;
-    let conflictCount = 0; // متغير جديد لحساب التعارضات
     let missingCols = new Set();
+    let conflictPairs = new Map(); // لتخزين التعارضات بدون تكرار
+    
     const columnsToCheck = ["الفصل التدريبي", "الرقم المرجعي", "اليوم", "الوقت", "المبنى", "القاعة", "رقم المدرب"];
     
     globalFinalData.forEach((r, i) => {
@@ -2083,7 +2118,13 @@ function updateMissingStats() {
         if (r["القاعة"] && r["القاعة"].trim() !== "") {
             let conflict = findRoomConflict(r["اليوم"], r["الوقت"], r["القاعة"], r["اسم المدرب"], i);
             if (conflict) {
-                conflictCount++; // زيادة العداد إذا وجد تعارض
+                let conflictIndex = globalFinalData.indexOf(conflict);
+                // إنشاء مفتاح فريد لتجنب تكرار نفس التعارض (لأن المدرب "أ" يعارض "ب"، و"ب" يعارض "أ")
+                let pairKey = i < conflictIndex ? `${i}-${conflictIndex}` : `${conflictIndex}-${i}`;
+                
+                if (!conflictPairs.has(pairKey)) {
+                    conflictPairs.set(pairKey, { r1: r, r2: conflict });
+                }
             }
         }
     });
@@ -2091,7 +2132,9 @@ function updateMissingStats() {
     const warningSection = document.getElementById('warning-section');
     const missingRowsText = document.getElementById('missing-rows-text');
     const missingColsText = document.getElementById('missing-cols-text');
-    const conflictStatsText = document.getElementById('conflict-stats-text'); // العنصر الجديد
+    const conflictStatsText = document.getElementById('conflict-stats-text'); 
+
+    let conflictCount = conflictPairs.size;
 
     // إظهار صندوق التنبيه إذا كان هناك أي نقص أو أي تعارض
     if (missingCount > 0 || conflictCount > 0) {
@@ -2108,10 +2151,23 @@ function updateMissingStats() {
             missingColsText.style.display = 'none';
         }
 
-        // التحكم بظهور نصوص التعارض
+        // التحكم بظهور نصوص التعارض مع عرض التفاصيل
         if (conflictCount > 0) {
             conflictStatsText.style.display = 'block';
-            conflictStatsText.innerHTML = `🚨 يوجد (<strong>${conflictCount}</strong>) صفوف تحتوي على تعارض في القاعات (مظللة باللون الأحمر بالجدول).`;
+            let conflictHtml = `🚨 يوجد (<strong>${conflictCount}</strong>) حالات تعارض في القاعات (مظللة باللون الأحمر بالجدول):`;
+            
+            // إضافة قائمة تفصيلية بالتعارضات
+            conflictHtml += `<ul style="margin: 8px 0 0 0; padding-inline-start: 20px; font-size: 13px; font-weight: 600; color: #d32f2f; line-height: 1.8;">`;
+            
+            conflictPairs.forEach((pair) => {
+                let r1 = pair.r1;
+                let r2 = pair.r2;
+                
+                conflictHtml += `<li>قاعة (<strong>${r1["القاعة"]}</strong>) يوم ${r1["اليوم"]} [${r1["الوقت"]}]: المدرب ${r1["اسم المدرب"]} (شعبة ${r1["الشعبة"]}) <strong style="color:red; background:#ffebee; padding:2px 4px; border-radius:4px;">متعارض مع</strong> المدرب ${r2["اسم المدرب"]} (شعبة ${r2["الشعبة"]})</li>`;
+            });
+            
+            conflictHtml += `</ul>`;
+            conflictStatsText.innerHTML = conflictHtml;
         } else {
             conflictStatsText.style.display = 'none';
         }
