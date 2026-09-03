@@ -552,6 +552,17 @@
     font-size: 10px;
 }
 
+        /* تظليل كامل الصف المتعارض باللون الأحمر الفاتح جداً */
+.data-table tr.conflict-row td {
+    background-color: #ffebee !important;
+}
+
+/* تمييز خلية القاعة المتعارضة داخل الصف بلون أغمق قليلاً */
+.data-table tr.conflict-row td.conflict-cell {
+    background-color: #ffcdd2 !important; 
+    border: 2px solid #d32f2f !important;
+}
+        
 /* تنسيق الخلية غير القابلة للتعديل (المبنى) */
 .readonly-cell {
     background-color: #f1f1f1;
@@ -1635,8 +1646,7 @@ function handleEnterKey(event, cellElement) {
         cellElement.blur(); // إلغاء التركيز مما يؤدي لتشغيل دوال الحفظ (onblur) تلقائياً
     }
 }
-
-        // --- الدالة المحدثة لرسم الجدول (تتضمن زر Enter) ---
+// --- الدالة المحدثة لرسم الجدول (تتضمن تلوين كامل الصف) ---
 function renderResultsTable() {
     const container = document.querySelector('.table-responsive');
     const filterValue = document.getElementById('data-filter').value;
@@ -1654,7 +1664,7 @@ function renderResultsTable() {
         let html = `
         <div class="edit-hint">
             <i data-lucide="edit-3"></i> 
-            المرجعي، القاعة، ورقم المدرب قابلة للتعديل. سيتم استخراج المبنى تلقائياً، واضغط (Enter) للحفظ السريع!
+            الرقم المرجعي، والقاعة، ورقم المدرب قابلة للتعديل. سيتم استخراج المبنى تلقائياً.
         </div>
         <table class="data-table">
             <thead>
@@ -1680,13 +1690,17 @@ function renderResultsTable() {
                 let badgeClass = row["نوع المحاضرة"] === 'عملي' ? 'badge-prac' : 'badge-theory';
                 let realIndex = globalFinalData.indexOf(row); // الأندكس الحقيقي
                 
-                // فحص التعارض المسبق لتلوين الخلية
+                // فحص التعارض المسبق لتلوين الخلية والصف
                 let hasConflict = findRoomConflict(row["اليوم"], row["الوقت"], row["القاعة"], row["اسم المدرب"], realIndex);
+                
+                // كلاس الصف وكلاس الخلية
+                let rowClass = hasConflict ? "conflict-row" : "";
                 let roomClass = hasConflict ? "editable-cell conflict-cell" : "editable-cell";
                 let roomTitle = hasConflict ? `مستخدمة من: ${hasConflict["اسم المدرب"]}` : "";
 
+                // إضافة rowClass للـ tr
                 html += `
-                    <tr>
+                    <tr class="${rowClass}">
                         <td class="editable-cell" contenteditable="true" 
                             onkeydown="handleEnterKey(event, this)" 
                             onblur="updateCellData(${realIndex}, 'الرقم المرجعي', this)">${row["الرقم المرجعي"] || ''}</td>
