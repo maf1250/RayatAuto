@@ -865,6 +865,7 @@
                 <div class="warning-title"><i data-lucide="alert-triangle"></i> تنبيه هام:</div>
                 <p id="missing-rows-text" style="margin: 5px 0; font-size: 15px; color: #333;"></p>
                 <p id="missing-cols-text" style="margin: 5px 0; font-size: 15px; color: #333;"></p>
+                <p id="conflict-stats-text" style="margin: 5px 0; font-size: 15px; color: #d32f2f; font-weight: bold;"></p>
                 <p style="font-size: 13px; color: #666; margin-top: 10px; border-top: 1px solid #ffeeba; padding-top: 10px;">
                     <i data-lucide="info" style="width: 14px; height: 14px; vertical-align: middle;"></i> 
                     نأمل فتح الملف، ومراجعة هذه الخانات وتعبئتها أو التأكد من سبب عدم تطابقها.
@@ -1890,79 +1891,117 @@ function closeCustomModal(modalId) {
             }, 3500);
         }
 
-        // دالة النسخ لرايات أوتو
-   function copyToRayatAuto() {
-            regenerateUniqueData(); // تحديث البيانات لأخذ التعديلات الجديدة في الاعتبار
-            
-            if (globalUniqueData.length === 0) {
-                showToast('<i data-lucide="x-circle"></i> لا توجد بيانات لنسخها!', true);
-                return;
-            }
+        let pendingExportAction = null;
 
-            const columns = ["الفصل التدريبي", "الرقم المرجعي", "اليوم", "الوقت", "المبنى", "القاعة", "رقم المدرب"];
-            let textToCopy = "";
-            globalUniqueData.forEach(row => {
-                let rowData = columns.map(col => row[col] || "");
-                textToCopy += rowData.join("\t") + "\n";
-            });
-
-            navigator.clipboard.writeText(textToCopy.trim()).then(() => {
-                showToast('<i data-lucide="check-circle"></i> تم تحديث ونسخ البيانات بنجاح! الصقها في رايات أوتو.');
-            }).catch(err => {
-                showToast('<i data-lucide="x-circle"></i> حدث خطأ أثناء النسخ: ' + err, true);
-            });
+// دالة تفحص إذا كان هناك أي تعارض في الجدول بالكامل
+function hasAnyConflicts() {
+    for (let i = 0; i < globalFinalData.length; i++) {
+        let row = globalFinalData[i];
+        if (row["القاعة"] && row["القاعة"].trim() !== "") {
+            let conflict = findRoomConflict(row["اليوم"], row["الوقت"], row["القاعة"], row["اسم المدرب"], i);
+            if (conflict) return true;
         }
+    }
+    return false;
+}
 
-      async function downloadExcel() {
-            try {
-                regenerateUniqueData(); // تحديث البيانات لأخذ التعديلات الجديدة في الاعتبار
-                
-                const workbook = new ExcelJS.Workbook();
-                const worksheet1 = workbook.addWorksheet("الجدول النهائي", { views: [{ rightToLeft: true, activeCell: 'A1' }] });
-                worksheet1.columns = [
-                    { header: "الفصل التدريبي", key: "الفصل التدريبي", width: 13 },
-                    { header: "الرقم المرجعي", key: "الرقم المرجعي", width: 13 },
-                    { header: "اليوم", key: "اليوم", width: 9 },
-                    { header: "الوقت", key: "الوقت", width: 15 },
-                    { header: "المبنى", key: "المبنى", width: 10 },
-                    { header: "القاعة", key: "القاعة", width: 15 },
-                    { header: "رقم المدرب", key: "رقم المدرب", width: 12 }
-                ];
-                worksheet1.addRows(globalUniqueData);
-                worksheet1.getRow(1).font = { bold: true };
-                worksheet1.getRow(1).alignment = { horizontal: 'center' };
+// دالة تنفيذ الإجراء بعد التجاوز (إذا اختار المستخدم "تجاهل والمتابعة")
+function proceedWithExport() {
+    closeCustomModal('export-conflict-modal');
+    if (pendingExportAction === 'copy') {
+        copyToRayatAuto(true);
+    } else if (pendingExportAction === 'download') {
+        downloadExcel(true);
+    }
+}
+        // دالة النسخ لرايات أوتو (محدثة لتشمل فحص التعارض)
+function copyToRayatAuto(force = false) {
+    // التحقق من التعارض قبل النسخ
+    if (!force && hasAnyConflicts()) {
+        pendingExportAction = 'copy';
+        document.getElementById('export-conflict-modal').style.display = 'flex';
+        return; // إيقاف العملية حتى يقرر المستخدم
+    }
 
-                const worksheet2 = workbook.addWorksheet("كامل البيانات", { views: [{ rightToLeft: true }] });
-                worksheet2.columns = [
-                    { header: "الفصل التدريبي", key: "الفصل التدريبي", width: 13 },
-                    { header: "الرقم المرجعي", key: "الرقم المرجعي", width: 13 },
-                    { header: "اليوم", key: "اليوم", width: 9 },
-                    { header: "الوقت", key: "الوقت", width: 15 },
-                    { header: "المبنى", key: "المبنى", width: 10 },
-                    { header: "القاعة", key: "القاعة", width: 15 },
-                    { header: "رقم المدرب", key: "رقم المدرب", width: 12 },
-                    { header: "اسم المدرب", key: "اسم المدرب", width: 22 },
-                    { header: "اسم المقرر", key: "اسم المقرر", width: 22 },
-                    { header: "رمز المقرر", key: "رمز المقرر", width: 15 },
-                    { header: "الشعبة", key: "الشعبة", width: 10 },
-                    { header: "نوع المحاضرة", key: "نوع المحاضرة", width: 15 }
-                ];
-                worksheet2.addRows(globalFinalData);
-                worksheet2.getRow(1).font = { bold: true };
-                worksheet2.getRow(1).alignment = { horizontal: 'center' };
-                
-                const buffer = await workbook.xlsx.writeBuffer();
-                const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = "الجدول_النهائي.xlsx";
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            } catch (err) {
-                alert("حدث خطأ أثناء تحميل الملف: " + err);
-            }
-        }
+    regenerateUniqueData(); // تحديث البيانات لأخذ التعديلات الجديدة في الاعتبار
+    
+    if (globalUniqueData.length === 0) {
+        showToast('<i data-lucide="x-circle"></i> لا توجد بيانات لنسخها!', true);
+        return;
+    }
+
+    const columns = ["الفصل التدريبي", "الرقم المرجعي", "اليوم", "الوقت", "المبنى", "القاعة", "رقم المدرب"];
+    let textToCopy = "";
+    globalUniqueData.forEach(row => {
+        let rowData = columns.map(col => row[col] || "");
+        textToCopy += rowData.join("\t") + "\n";
+    });
+
+    navigator.clipboard.writeText(textToCopy.trim()).then(() => {
+        showToast('<i data-lucide="check-circle"></i> تم تحديث ونسخ البيانات بنجاح! الصقها في رايات أوتو.');
+    }).catch(err => {
+        showToast('<i data-lucide="x-circle"></i> حدث خطأ أثناء النسخ: ' + err, true);
+    });
+}
+
+// دالة التحميل للإكسل (محدثة لتشمل فحص التعارض)
+async function downloadExcel(force = false) {
+    // التحقق من التعارض قبل التحميل
+    if (!force && hasAnyConflicts()) {
+        pendingExportAction = 'download';
+        document.getElementById('export-conflict-modal').style.display = 'flex';
+        return; // إيقاف العملية حتى يقرر المستخدم
+    }
+
+    try {
+        regenerateUniqueData(); // تحديث البيانات لأخذ التعديلات الجديدة في الاعتبار
+        
+        const workbook = new ExcelJS.Workbook();
+        const worksheet1 = workbook.addWorksheet("الجدول النهائي", { views: [{ rightToLeft: true, activeCell: 'A1' }] });
+        worksheet1.columns = [
+            { header: "الفصل التدريبي", key: "الفصل التدريبي", width: 13 },
+            { header: "الرقم المرجعي", key: "الرقم المرجعي", width: 13 },
+            { header: "اليوم", key: "اليوم", width: 9 },
+            { header: "الوقت", key: "الوقت", width: 15 },
+            { header: "المبنى", key: "المبنى", width: 10 },
+            { header: "القاعة", key: "القاعة", width: 15 },
+            { header: "رقم المدرب", key: "رقم المدرب", width: 12 }
+        ];
+        worksheet1.addRows(globalUniqueData);
+        worksheet1.getRow(1).font = { bold: true };
+        worksheet1.getRow(1).alignment = { horizontal: 'center' };
+
+        const worksheet2 = workbook.addWorksheet("كامل البيانات", { views: [{ rightToLeft: true }] });
+        worksheet2.columns = [
+            { header: "الفصل التدريبي", key: "الفصل التدريبي", width: 13 },
+            { header: "الرقم المرجعي", key: "الرقم المرجعي", width: 13 },
+            { header: "اليوم", key: "اليوم", width: 9 },
+            { header: "الوقت", key: "الوقت", width: 15 },
+            { header: "المبنى", key: "المبنى", width: 10 },
+            { header: "القاعة", key: "القاعة", width: 15 },
+            { header: "رقم المدرب", key: "رقم المدرب", width: 12 },
+            { header: "اسم المدرب", key: "اسم المدرب", width: 22 },
+            { header: "اسم المقرر", key: "اسم المقرر", width: 22 },
+            { header: "رمز المقرر", key: "رمز المقرر", width: 15 },
+            { header: "الشعبة", key: "الشعبة", width: 10 },
+            { header: "نوع المحاضرة", key: "نوع المحاضرة", width: 15 }
+        ];
+        worksheet2.addRows(globalFinalData);
+        worksheet2.getRow(1).font = { bold: true };
+        worksheet2.getRow(1).alignment = { horizontal: 'center' };
+        
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = "الجدول_النهائي.xlsx";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } catch (err) {
+        alert("حدث خطأ أثناء تحميل الملف: " + err);
+    }
+}
         
         // دوال تظليل المحاضرات المرتبطة بنفس الرقم المرجعي
         function highlightCRN(crn) {
@@ -2005,32 +2044,66 @@ function closeCustomModal(modalId) {
             });
         }
 
-        // دالة لتحديث عداد النواقص ديناميكياً
-        function updateMissingStats() {
-            let missingCount = 0;
-            let missingCols = new Set();
-            const columnsToCheck = ["الفصل التدريبي", "الرقم المرجعي", "اليوم", "الوقت", "المبنى", "القاعة", "رقم المدرب"];
-            
-            globalFinalData.forEach(r => {
-                let hasMissing = false;
-                columnsToCheck.forEach(c => {
-                    if (r[c] === undefined || r[c] === null || String(r[c]).trim() === "") { 
-                        hasMissing = true; 
-                        missingCols.add(c); 
-                    }
-                });
-                if (hasMissing) missingCount++;
-            });
+    // دالة لتحديث عداد النواقص والتعارضات ديناميكياً
+function updateMissingStats() {
+    let missingCount = 0;
+    let conflictCount = 0; // متغير جديد لحساب التعارضات
+    let missingCols = new Set();
+    const columnsToCheck = ["الفصل التدريبي", "الرقم المرجعي", "اليوم", "الوقت", "المبنى", "القاعة", "رقم المدرب"];
+    
+    globalFinalData.forEach((r, i) => {
+        // 1. فحص النواقص
+        let hasMissing = false;
+        columnsToCheck.forEach(c => {
+            if (r[c] === undefined || r[c] === null || String(r[c]).trim() === "") { 
+                hasMissing = true; 
+                missingCols.add(c); 
+            }
+        });
+        if (hasMissing) missingCount++;
 
-            const warningSection = document.getElementById('warning-section');
-            if (missingCount > 0) {
-                warningSection.style.display = 'block';
-                document.getElementById('missing-rows-text').innerText = `عدد الصفوف التي تحتوي على نقص: ${missingCount}`;
-                document.getElementById('missing-cols-text').innerText = `الأعمدة الناقصة: ${Array.from(missingCols).join(" ، ")}`;
-            } else {
-                warningSection.style.display = 'none'; // إخفاء التنبيه إذا اكتملت كل النواقص
+        // 2. فحص التعارضات
+        if (r["القاعة"] && r["القاعة"].trim() !== "") {
+            let conflict = findRoomConflict(r["اليوم"], r["الوقت"], r["القاعة"], r["اسم المدرب"], i);
+            if (conflict) {
+                conflictCount++; // زيادة العداد إذا وجد تعارض
             }
         }
+    });
+
+    const warningSection = document.getElementById('warning-section');
+    const missingRowsText = document.getElementById('missing-rows-text');
+    const missingColsText = document.getElementById('missing-cols-text');
+    const conflictStatsText = document.getElementById('conflict-stats-text'); // العنصر الجديد
+
+    // إظهار صندوق التنبيه إذا كان هناك أي نقص أو أي تعارض
+    if (missingCount > 0 || conflictCount > 0) {
+        warningSection.style.display = 'block';
+        
+        // التحكم بظهور نصوص النواقص
+        if (missingCount > 0) {
+            missingRowsText.style.display = 'block';
+            missingColsText.style.display = 'block';
+            missingRowsText.innerHTML = `⚠️ عدد الصفوف التي تحتوي على نقص: <strong>${missingCount}</strong>`;
+            missingColsText.innerText = `الأعمدة الناقصة: ${Array.from(missingCols).join(" ، ")}`;
+        } else {
+            missingRowsText.style.display = 'none';
+            missingColsText.style.display = 'none';
+        }
+
+        // التحكم بظهور نصوص التعارض
+        if (conflictCount > 0) {
+            conflictStatsText.style.display = 'block';
+            conflictStatsText.innerHTML = `🚨 يوجد (<strong>${conflictCount}</strong>) صفوف تحتوي على تعارض في القاعات (مظللة باللون الأحمر بالجدول).`;
+        } else {
+            conflictStatsText.style.display = 'none';
+        }
+
+    } else {
+        // إخفاء الصندوق بالكامل إذا كانت البيانات مكتملة ولا يوجد تعارض
+        warningSection.style.display = 'none'; 
+    }
+}
         // دالة إخفاء الإعلان
         function hideAd() {
             const ad = document.getElementById('matrixAd');
@@ -2133,6 +2206,17 @@ async function submitContactForm(e) {
             <button type="submit" class="btn-process" id="contact_submit_btn">إرسال الرسالة</button>
             <div id="contact_status" style="margin-top:15px; text-align:center; font-weight:600; font-size:14px;"></div>
         </form>
+    </div>
+</div>
+    <!-- نافذة تعارض عند التصدير -->
+<div id="export-conflict-modal" class="custom-modal-overlay">
+    <div class="custom-modal-box">
+        <div class="custom-modal-title error-title"><i data-lucide="alert-triangle"></i> تنبيه: يوجد تعارض في القاعات!</div>
+        <p>تم اكتشاف تعارض في بعض القاعات (مظللة باللون الأحمر في الجدول). يوصى بشدة تصحيحها قبل النسخ أو التحميل.</p>
+        <div class="custom-modal-buttons">
+            <button class="btn-sm btn-confirm" onclick="proceedWithExport()">تجاهل والمتابعة</button>
+            <button class="btn-sm btn-cancel" onclick="closeCustomModal('export-conflict-modal')">إلغاء وتصحيح التعارض</button>
+        </div>
     </div>
 </div>
     <!-- نافذة التعارض الفوري -->
