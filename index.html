@@ -1858,7 +1858,10 @@ function executePropagation(teacherName, roomCode, bldCode, excludeCRN) {
         if (row["اسم المدرب"] === teacherName && row["الرقم المرجعي"] !== excludeCRN) {
             let conflict = findRoomConflict(row["اليوم"], row["الوقت"], roomCode, teacherName, i);
             if (conflict) {
-                logs.push(`<li>لم يتم الإضافة لـ (${row["اسم المقرر"]} - الشعبة ${row["الشعبة"]}) يوم ${row["اليوم"]} بسبب تعارض مع ${conflict["اسم المدرب"]}.</li>`);
+                let currentCrnText = row["الرقم المرجعي"] || "غير محدد";
+                let conflictCrnText = conflict["الرقم المرجعي"] || "غير محدد";
+
+                logs.push(`<li>لم يتم الإضافة لـ (${row["اسم المقرر"]} - شعبة ${row["الشعبة"]} - مرجعي: <strong>${currentCrnText}</strong>) يوم ${row["اليوم"]} بسبب تعارض مع المدرب ${conflict["اسم المدرب"]} (مرجعي: <strong>${conflictCrnText}</strong>).</li>`);
             } else {
                 row["القاعة"] = roomCode;
                 row["المبنى"] = bldCode;
