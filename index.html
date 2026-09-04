@@ -2255,7 +2255,120 @@ async function submitContactForm(e) {
         btn.innerText = 'إرسال الرسالة';
     }
 }
-        
+        // ==========================================
+// دوال التحقق من صحة الملفات المرفوعة
+// ==========================================
+
+// 1. التحقق من امتداد الملف
+function isValidFileGuard(file, allowedExtensions) {
+    if (!file) return false;
+    let ext = file.name.split('.').pop().toLowerCase();
+    if (!allowedExtensions.includes(ext)) {
+        showToast(`<i data-lucide="x-circle"></i> صيغة الملف غير مدعومة! المسموح: ${allowedExtensions.join(', ')}`, true);
+        return false;
+    }
+    return true;
+}
+
+// 2. قراءة رؤوس الأعمدة والتحقق منها
+function validateFileHeaders(inputElement, expectedHeadersGroups, fileLabel) {
+    let file = inputElement.files[0];
+    if (!file) return;
+
+    let reader = new FileReader();
+    let isCSV = file.name.toLowerCase().endsWith('.csv');
+
+    reader.onload = function(e) {
+        try {
+            let workbook;
+            // نقرأ فقط أول صف (sheetRows: 1) لتسريع العملية وعدم استهلاك الذاكرة
+            if (isCSV) {
+                workbook = XLSX.read(e.target.result, {type: 'string', sheetRows: 1});
+            } else {
+                let data = new Uint8Array(e.target.result);
+                workbook = XLSX.read(data, {type: 'array', sheetRows: 1});
+            }
+            
+            let firstSheetName = workbook.SheetNames[0];
+            let worksheet = workbook.Sheets[firstSheetName];
+            
+            // تحويل أول صف إلى مصفوفة (Array)
+            let json = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: ""}); 
+            let actualHeaders = json[0] || [];
+            
+            // تنظيف العناوين من المسافات الزائدة
+            actualHeaders = actualHeaders.map(h => String(h).trim());
+
+            // التحقق مما إذا كانت إحدى المجموعات المطلوبة موجودة بالكامل في الملف
+            let isValid = false;
+            for (let group of expectedHeadersGroups) {
+                let groupValid = group.every(h => actualHeaders.includes(h));
+                if (groupValid) {
+                    isValid = true;
+                    break;
+                }
+            }
+
+            if (!isValid) {
+                showToast(`<i data-lucide="alert-triangle"></i> الملف المرفق ليس تقرير "${fileLabel}" الصحيح!`, true);
+                inputElement.value = ''; // تفريغ الحقل لأن الملف خاطئ
+            } else {
+                showToast(`<i data-lucide="check-circle"></i> تم التحقق من ملف "${fileLabel}" بنجاح.`);
+            }
+        } catch (err) {
+            showToast(`<i data-lucide="x-circle"></i> حدث خطأ أثناء فحص الملف. تأكد من سلامته.`, true);
+            inputElement.value = '';
+        }
+    };
+
+    // قراءة الـ CSV بترميز متوافق مع نظام رايات لدعم اللغة العربية
+    if (isCSV) reader.readAsText(file, 'windows-1256'); 
+    else reader.readAsArrayBuffer(file);
+}
+
+// ==========================================
+// ربط أحداث التغيير (Change) بحقول الرفع
+// ==========================================
+
+// التحقق من ملف SS01
+document.getElementById('ss01_file').addEventListener('change', function() {
+    if (this.files.length > 0) {
+        if (!isValidFileGuard(this.files[0], ['csv', 'xlsx', 'xls'])) { 
+            this.value = ''; 
+            return; 
+        }
+        // التحقق من الأعمدة (يجب أن يحتوي الملف على إحدى هذه المجموعات على الأقل)
+        validateFileHeaders(this, [
+            ['الرقم المرجعي', 'نوع الجدولة'], 
+            ['كل من الاستجابة الصوتية والخدمة الذاتية متاح', 'جزء الفصل'], 
+            ['المقرر', 'اليوم']
+        ], 'جدول الوحدة (SS01)'); 
+    }
+});
+
+// التحقق من ملف SL03
+document.getElementById('sl03_file').addEventListener('change', function() {
+    if (this.files.length > 0) {
+        if (!isValidFileGuard(this.files[0], ['csv', 'xlsx', 'xls'])) { 
+            this.value = ''; 
+            return; 
+        }
+        // التحقق من الأعمدة (يجب أن يحتوي على "اسم عضو هيئة التدريبي" أو "البريد الالكتروني")
+        validateFileHeaders(this, [
+            ['اسم عضو هيئة التدريبي'], 
+            ['البريد الالكتروني']
+        ], 'أعضاء هيئة التدريب (SL03)'); 
+    }
+});
+
+// التحقق من امتداد ملف aSc Timetables
+document.getElementById('timetables_file').addEventListener('change', function() {
+    if (this.files.length > 0) {
+        if (!isValidFileGuard(this.files[0], ['xml'])) { 
+            this.value = ''; 
+        }
+    }
+});
     </script>
     <!-- نافذة المراسلة المنبثقة -->
 <div id="contact-modal" class="modal-overlay" style="display: none;">
