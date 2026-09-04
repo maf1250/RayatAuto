@@ -905,6 +905,7 @@ let currentTab = 'all';
                 document.getElementById('step1-status').innerHTML = "<span class='error'>نأمل رفع جميع الملفات أولاً للإنتقال للخطوة التالية!</span>";
                 return;
             }
+            
             document.getElementById('step1-status').innerHTML = "";
             document.getElementById('step1').classList.remove('active');
             document.getElementById('step2').classList.add('active');
@@ -2181,12 +2182,22 @@ conflictHtml += `<li>قاعة (<strong>${r1["القاعة"]}</strong>) يوم ${
     }
 }
         // دالة إخفاء الإعلان
-        function hideAd() {
-            const ad = document.getElementById('matrixAd');
-            if (ad) {
-                ad.style.display = 'none';
-            }
-        }
+        // دالة إخفاء الإعلان وحفظ الرغبة
+function hideAd() {
+    const ad = document.getElementById('matrixAd');
+    if (ad) {
+        ad.style.display = 'none';
+        localStorage.setItem('matrixAdHidden', 'true');
+    }
+}
+
+// فحص حالة الإعلان عند تحميل الصفحة
+window.addEventListener('DOMContentLoaded', () => {
+    if (localStorage.getItem('matrixAdHidden') === 'true') {
+        const ad = document.getElementById('matrixAd');
+        if (ad) ad.style.display = 'none';
+    }
+});
         
 // فتح نافذة المراسلة
 function openContactModal() {
@@ -2244,6 +2255,7 @@ async function submitContactForm(e) {
         btn.innerText = 'إرسال الرسالة';
     }
 }
+        
     </script>
     <!-- نافذة المراسلة المنبثقة -->
 <div id="contact-modal" class="modal-overlay" style="display: none;">
