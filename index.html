@@ -2163,7 +2163,10 @@ function updateMissingStats() {
                 let r1 = pair.r1;
                 let r2 = pair.r2;
                 
-                conflictHtml += `<li>قاعة (<strong>${r1["القاعة"]}</strong>) يوم ${r1["اليوم"]} [${r1["الوقت"]}]: ${r1["اسم المدرب"]} (شعبة ${r1["الشعبة"]}) <strong style="color:red; background:#ffebee; padding:2px 4px; border-radius:4px;">متعارض مع</strong> ${r2["اسم المدرب"]} (شعبة ${r2["الشعبة"]})</li>`;
+let crn1 = r1["الرقم المرجعي"] || 'غير محدد';
+let crn2 = r2["الرقم المرجعي"] || 'غير محدد';
+
+conflictHtml += `<li>قاعة (<strong>${r1["القاعة"]}</strong>) يوم ${r1["اليوم"]} [${r1["الوقت"]}]: ${r1["اسم المدرب"]} (شعبة ${r1["الشعبة"]} - <strong>${crn1}</strong>) <strong style="color:red; background:#ffebee; padding:2px 4px; border-radius:4px;">متعارض مع</strong> ${r2["اسم المدرب"]} (شعبة ${r2["الشعبة"]} - <strong>${crn2}</strong>)</li>`;
             });
             
             conflictHtml += `</ul>`;
