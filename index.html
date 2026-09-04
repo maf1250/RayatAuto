@@ -1587,14 +1587,14 @@ async function processFiles() {
                 filterContainer.style.display = 'block';
                 // جلب أسماء المدربين بدون تكرار
                 let trainers = [...new Set(globalFinalData.map(item => item["اسم المدرب"]).filter(Boolean))].sort();
-                filterSelect.innerHTML = '<option value="">-- اختر المدرب --</option>';
+                filterSelect.innerHTML = '<option value="">-- نأمل اختيار المدرب/ـة --</option>';
                 trainers.forEach(t => filterSelect.innerHTML += `<option value="${t}">${t}</option>`);
                 renderResultsTable(); // تم تغيير الاسم هنا
             } else if (tab === 'section') {
                 filterContainer.style.display = 'block';
                 // جلب الشعب بدون تكرار
                 let sections = [...new Set(globalFinalData.map(item => item["الشعبة"]).filter(Boolean))].sort();
-                filterSelect.innerHTML = '<option value="">-- اختر الشعبة --</option>';
+                filterSelect.innerHTML = '<option value="">-- نأمل اختيار الشعبة --</option>';
                 sections.forEach(s => filterSelect.innerHTML += `<option value="${s}">${s}</option>`);
                 renderResultsTable(); // تم تغيير الاسم هنا
             }
@@ -1677,8 +1677,8 @@ function renderResultsTable() {
                     <th>الوقت</th>
                     <th>المبنى</th>
                     <th>القاعة</th>
-                    <th>رقم المدرب</th>
-                    <th>المدرب</th>
+                    <th>رقم المدرب/ـة</th>
+                    <th>المدرب/ـة</th>
                     <th>النوع</th>
                 </tr>
             </thead>
