@@ -2333,15 +2333,14 @@ function validateFileHeaders(inputElement, expectedHeadersGroups, fileLabel) {
 // التحقق من ملف SS01
 document.getElementById('ss01_file').addEventListener('change', function() {
     if (this.files.length > 0) {
-        if (!isValidFileGuard(this.files[0], ['csv', 'xlsx', 'xls'])) { 
+        if (!isValidFileGuard(this.files[0], ['csv'])) { 
             this.value = ''; 
             return; 
         }
         // التحقق من الأعمدة (يجب أن يحتوي الملف على إحدى هذه المجموعات على الأقل)
         validateFileHeaders(this, [
-            ['الرقم المرجعي', 'نوع الجدولة'], 
-            ['كل من الاستجابة الصوتية والخدمة الذاتية متاح', 'جزء الفصل'], 
-            ['المقرر', 'اليوم']
+            ['الرقم المرجعي', 'كل من الاستجابة الصوتية والخدمة الذاتية متاح' ,'نوع الجدولة'], 
+            ['المقرر', 'جزء الفصل' ,'اليوم']
         ], 'جدول الوحدة (SS01)'); 
     }
 });
@@ -2349,7 +2348,7 @@ document.getElementById('ss01_file').addEventListener('change', function() {
 // التحقق من ملف SL03
 document.getElementById('sl03_file').addEventListener('change', function() {
     if (this.files.length > 0) {
-        if (!isValidFileGuard(this.files[0], ['csv', 'xlsx', 'xls'])) { 
+        if (!isValidFileGuard(this.files[0], ['csv'])) { 
             this.value = ''; 
             return; 
         }
